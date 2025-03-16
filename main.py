@@ -12,6 +12,7 @@
 
 # %%
 import pandas as pd
+import numpy as np
 
 # %% [markdown]
 # The constants used in the program.

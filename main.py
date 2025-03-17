@@ -13,7 +13,11 @@
 # %%
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import seaborn as sb
+
+# Set the seaborn style
+sb.set_theme()
 
 # %% [markdown]
 # The constants used in the program.
@@ -26,4 +30,4 @@ DATA_FILE = "./data.xls"
 
 # %%
 data = pd.read_excel(DATA_FILE)
-data.head()
+print(data.head())

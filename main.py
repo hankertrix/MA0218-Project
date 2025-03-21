@@ -1,14 +1,14 @@
 import marimo
 
 __generated_with = "0.11.22"
-app = marimo.App(width="full", app_title="MA2018 Mini Project")
+app = marimo.App(width="full", app_title="MA0218 Mini Project")
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(
         r"""
-        # MA2018 Mini Project
+        # MA0218 Mini Project
         This project makes use of the climate change dataset.
         """
     )

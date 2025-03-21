@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.11.22"
-app = marimo.App()
+app = marimo.App(width="full", app_title="MA2018 Mini Project")
 
 
 @app.cell(hide_code=True)

@@ -1,3 +1,4 @@
+# vim: tabstop=4 shiftwidth=4 noexpandtab
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -13,16 +14,22 @@
 import marimo
 
 __generated_with = "0.11.28"
-app = marimo.App(width="full", app_title="MA0218 Mini Project")
+app = marimo.App(
+	width="full",
+	app_title="MA0218 Mini Project",
+	layout_file="layouts/main.slides.json",
+)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
 	mo.md(
-		r"""
-		# MA0218 Mini Project
-		By: Nicholas, Haziq, Dylan and Jun Feng
-		"""
+		"\n".join(
+			[
+				"# MA0218 Mini Project",
+				"By: Nicholas, Haziq, Dylan and Jun Feng",
+			]
+		)
 	)
 	return
 
@@ -30,6 +37,8 @@ def _(mo):
 @app.cell
 def _():
 	# Import all the required libraries
+	import re
+
 	import marimo as mo
 	import matplotlib.pyplot as plt
 	import numpy as np
@@ -38,7 +47,7 @@ def _():
 
 	# Set the seaborn style
 	sb.set_theme()
-	return mo, np, pd, plt, sb
+	return mo, np, pd, plt, re, sb
 
 
 @app.cell
@@ -154,7 +163,7 @@ def _(DATA_FILE, pd):
 
 
 @app.cell
-def _(YEAR_RANGE, data, np, pd):
+def _(YEAR_RANGE, data, mo, np, pd, re):
 	# Create the function to clean the data
 	def clean_data(given_data: pd.DataFrame) -> pd.DataFrame:
 		# Make a copy of the data
@@ -181,10 +190,14 @@ def _(YEAR_RANGE, data, np, pd):
 		# Return the data
 		return cleaned_data
 
-	# Clean the data
-	cleaned_data = clean_data(data)
-
-	return clean_data, data
+	# Save the code to clean the data for later
+	clean_data_code = mo.Html(
+		# The regular expression here is to remove everything
+		# after the return statement of the clean_data function
+		# so that these lines of code won't be displayed
+		re.sub("(return cleaned_data).*?'", "\\1&quot;'", mo.show_code().text)
+	)
+	return clean_data, clean_data_code
 
 
 if __name__ == "__main__":

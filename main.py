@@ -13,7 +13,7 @@
 
 import marimo
 
-__generated_with = "0.11.28"
+__generated_with = "0.11.30"
 app = marimo.App(
 	width="full",
 	app_title="MA0218 Mini Project: The Climate Forum",
@@ -258,14 +258,36 @@ def _(
 		# Return the data
 		return cleaned_data
 
+	# Create the function to remove everything after a line of code
+	def strip_unnecessary_code(line_of_code: str) -> str:
+		return re.sub(
+			f"({line_of_code}).*?'", "\\1&quot;'", mo.show_code().text
+		)
+
 	# Save the code to clean the data for later
 	clean_data_function_code = html(
-		# The regular expression here is to remove everything
-		# after the return statement of the clean_data function
-		# so that these lines of code won't be displayed
-		re.sub("(return cleaned_data).*?'", "\\1&quot;'", mo.show_code().text)
+		strip_unnecessary_code("return cleaned_data")
 	)
-	return clean_data, clean_data_function_code
+	return clean_data, clean_data_function_code, strip_unnecessary_code
+
+
+@app.cell
+def _(html, pd, strip_unnecessary_code):
+	# Create the function to impute the missing data
+	def impute_missing_data(given_data: pd.DataFrame) -> pd.DataFrame:
+		#
+
+		# Make a copy of the data
+		imputted_data = given_data.copy()
+
+		# Return the imputted data
+		return imputted_data
+
+	# Save the code to impute the data for later
+	impute_missing_data_function_code = html(
+		strip_unnecessary_code("return imputted_data")
+	)
+	return impute_missing_data, impute_missing_data_function_code
 
 
 if __name__ == "__main__":

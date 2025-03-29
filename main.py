@@ -16,22 +16,30 @@ import marimo
 __generated_with = "0.11.28"
 app = marimo.App(
 	width="full",
-	app_title="MA0218 Mini Project",
+	app_title="MA0218 Mini Project: The Climate Forum",
 	layout_file="layouts/main.slides.json",
 )
 
 
 @app.cell
 def _(mo):
-	mo.md(
-		"\n".join(
-			[
-				"# MA0218 Mini Project",
-				"By: Nicholas, Haziq, Dylan and Jun Feng",
-			]
-		)
+	# Create a function to more easily create HTML
+	def html(*args: str) -> mo.Html:
+		return mo.Html("\n".join(args))
+
+	# Create a function to more easily create markdown
+	def md(*args: str) -> mo.md:
+		return mo.md("\n".join(args))
+
+	html(
+		md("# MA0218 Mini Project:").center().text,
+		html("<h1>The Climate Forum</h1>").center().style(color="#3CB034").text,
+		md("By: Nicholas, Haziq, Dylan and Jun Feng")
+		.center()
+		.style(padding="5em")
+		.text,
 	)
-	return
+	return html, md
 
 
 @app.cell
@@ -54,6 +62,17 @@ def _():
 def _():
 	# The constants used in the program
 	DATA_FILE = "./data.xls"
+
+	# The list of columns to drop
+	COLUMNS_TO_DROP = [
+		# Drop the country code as we are using the country name
+		"Country code",
+		# Drop the series name as we are using the series code
+		"Series name",
+		# These two columns below are useless
+		"SCALE",
+		"Decimals",
+	]
 
 	# The list of series codes for series that have data for most years
 	SERIES_CODES_MOST_YEARS = [
@@ -145,6 +164,7 @@ def _():
 		"2008",
 	]
 	return (
+		COLUMNS_TO_DROP,
 		DATA_FILE,
 		SERIES_CODES_EVERY_5_YEARS,
 		SERIES_CODES_EVERY_5_YEARS_PLUS_2008,
@@ -156,14 +176,43 @@ def _():
 
 
 @app.cell
-def _(DATA_FILE, pd):
+def _(DATA_FILE, html, md, mo, pd):
 	# Read the data from the data file
 	data = pd.read_excel(DATA_FILE)
+
+	# Convert all the column names to string
+	data.columns = data.columns.astype(str)
+
+	# Display the slide contents
+	html(
+		md("## Data set").text,
+		html(
+			"<p>",
+			"The data set used is the climate change data set.",
+			"Have a look at the data set in the table below:",
+			"</p>",
+		)
+		.style(padding="10px 0px")
+		.text,
+		mo.ui.table(data, page_size=200).text,
+	)
 	return (data,)
 
 
 @app.cell
-def _(YEAR_RANGE, data, mo, np, pd, re):
+def _(
+	COLUMNS_TO_DROP,
+	SERIES_CODES_EVERY_5_YEARS,
+	SERIES_CODES_EVERY_5_YEARS_PLUS_2008,
+	SERIES_CODES_MOST_YEARS,
+	YEAR_RANGE,
+	data,
+	html,
+	mo,
+	np,
+	pd,
+	re,
+):
 	# Create the function to clean the data
 	def clean_data(given_data: pd.DataFrame) -> pd.DataFrame:
 		# Make a copy of the data
@@ -172,32 +221,51 @@ def _(YEAR_RANGE, data, mo, np, pd, re):
 		# Convert all the column names to string
 		cleaned_data.columns = data.columns.astype(str)
 
+		# Drop the columns that aren't needed
+		cleaned_data.drop(COLUMNS_TO_DROP, axis=1, inplace=True)
+
 		# Coerce all the data in the columns for the years to numeric
-		cleaned_data[YEAR_RANGE] = data[YEAR_RANGE].apply(
+		cleaned_data[YEAR_RANGE] = cleaned_data[YEAR_RANGE].apply(
 			lambda elem: pd.to_numeric(elem, errors="coerce")
 		)
 
 		# Replace all infinity values with NaNs
-		cleaned_data[YEAR_RANGE] = data[YEAR_RANGE].replace(
+		cleaned_data[YEAR_RANGE] = cleaned_data[YEAR_RANGE].replace(
 			[np.inf, -np.inf], np.nan
 		)
 
 		# Drop all the rows in the years that have all their values as NaNs
 		cleaned_data.drop(
-			data[data[YEAR_RANGE].isna().all(axis=1)].index, inplace=True
+			cleaned_data[cleaned_data[YEAR_RANGE].isna().all(axis=1)].index,
+			inplace=True,
 		)
+
+		# Drop all the rows with series we don't need
+		cleaned_data.drop(
+			cleaned_data[
+				~cleaned_data["Series code"].isin(
+					SERIES_CODES_MOST_YEARS
+					+ SERIES_CODES_EVERY_5_YEARS
+					+ SERIES_CODES_EVERY_5_YEARS_PLUS_2008
+				)
+			].index,
+			inplace=True,
+		)
+
+		# Reset the index of the data frame
+		cleaned_data.reset_index(drop=True, inplace=True)
 
 		# Return the data
 		return cleaned_data
 
 	# Save the code to clean the data for later
-	clean_data_code = mo.Html(
+	clean_data_function_code = html(
 		# The regular expression here is to remove everything
 		# after the return statement of the clean_data function
 		# so that these lines of code won't be displayed
 		re.sub("(return cleaned_data).*?'", "\\1&quot;'", mo.show_code().text)
 	)
-	return clean_data, clean_data_code
+	return clean_data, clean_data_function_code
 
 
 if __name__ == "__main__":

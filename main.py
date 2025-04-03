@@ -21,28 +21,6 @@ app = marimo.App(
 )
 
 
-app._unparsable_cell(
-	r"""
-    # Create a function to more easily create HTML def html(*args: str) -> mo.Html:
-    	return mo.Html(\"\n\".join(args))
-
-    # Create a function to more easily create markdown
-    def md(*args: str) -> mo.md:
-    	return mo.md(\"\n\".join(args))
-
-    html(
-    	md(\"# MA0218 Mini Project:\").center().text,
-    	html(\"<h1>The Climate Forum</h1>\").center().style(color=\"#3CB034\").text,
-    	md(\"By: Nicholas, Haziq, Dylan and Jun Feng\")
-    	.center()
-    	.style(padding=\"5em\")
-    	.text,
-    )
-    """,
-	name="_",
-)
-
-
 @app.cell
 def _():
 	# Import all the required libraries
@@ -70,6 +48,27 @@ def _():
 		re,
 		sb,
 	)
+
+
+@app.cell
+def _(mo):
+	# Create a function to more easily create HTML
+	def html(*args: str) -> mo.Html:
+		return mo.Html("\n".join(args))
+
+	# Create a function to more easily create markdown
+	def md(*args: str) -> mo.md:
+		return mo.md("\n".join(args))
+
+	html(
+		md("# MA0218 Mini Project:").center().text,
+		html("<h1>The Climate Forum</h1>").center().style(color="#3CB034").text,
+		md("By: Nicholas, Haziq, Dylan and Jun Feng")
+		.center()
+		.style(padding="5em")
+		.text,
+	)
+	return html, md
 
 
 @app.cell
@@ -335,7 +334,6 @@ def _(clean_data, data, impute_missing_data):
 
 	# Impute the missing data
 	imputted_data = impute_missing_data(cleaned_data)
-	imputted_data
 	return cleaned_data, imputted_data
 
 

@@ -1,7 +1,7 @@
 [project]
 name = "ma0218-mini-project"
 version = "0.0.1"
-description = "MA0218 Mini Project"
+description = "MA0218 Mini Project: The Climate Forum"
 authors = [
     { name = "hankertrix", email = "91734413+hankertrix@users.noreply.github.com" },
 ]

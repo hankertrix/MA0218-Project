@@ -34,6 +34,7 @@ def _():
 	from sklearn.experimental import enable_iterative_imputer
 	from sklearn.impute import IterativeImputer
 	from sklearn.linear_model import BayesianRidge
+	from sklearn.svm import SVR
 
 	# Set the seaborn style
 	sb.set_theme()
@@ -157,8 +158,10 @@ def _():
 		"SH.STA.ACSN",
 	]
 
-	# The range of years in the data set
-	YEAR_RANGE = [str(year) for year in range(1990, 2011 + 1)]
+	# The range of years in the data set.
+	#
+	# There is no data for 2011, so we are skipping it
+	YEAR_RANGE = [str(year) for year in range(1990, 2010 + 1)]
 
 	# The list of years every 5 years from 1990 - 2005
 	YEAR_RANGE_EVERY_5_YEARS = [
@@ -299,30 +302,33 @@ def _(
 	def impute_missing_data(given_data: pd.DataFrame) -> pd.DataFrame:
 		#
 
+		# Initialise the imputer object
+		imputer_object = IterativeImputer(estimator=BayesianRidge())
+
 		# Make a copy of the data
-		imputted_data = given_data.copy()
+		imputed_data = given_data.copy()
 
 		# Iterate over the given data
 		for index, row in given_data[YEAR_RANGE].iterrows():
 			#
 
 			# Impute the data for the row
-			imputted_row = IterativeImputer(
-				estimator=BayesianRidge()
-			).fit_transform(list(zip(YEAR_RANGE, row)))
+			imputed_row = imputer_object.fit_transform(
+				list(zip(YEAR_RANGE, row))
+			)
 
-			# Remove the year range from the imputted row
-			imputted_row_data = [value for (_, value) in imputted_row]
+			# Remove the year range from the imputed row
+			imputed_row_data = [value for (_, value) in imputed_row]
 
-			# Set the imputted row data to the imputted data
-			imputted_data.loc[index, YEAR_RANGE] = imputted_row_data
+			# Set the imputed row data to the imputed data
+			imputed_data.loc[index, YEAR_RANGE] = imputed_row_data
 
-		# Return the imputted data
-		return imputted_data
+		# Return the imputed data
+		return imputed_data
 
 	# Save the code to impute the data for later
 	impute_missing_data_function_code = html(
-		strip_unnecessary_code("return imputted_data")
+		strip_unnecessary_code("return imputed_data")
 	)
 	return impute_missing_data, impute_missing_data_function_code
 
@@ -332,9 +338,16 @@ def _(clean_data, data, impute_missing_data):
 	# Clean the data
 	cleaned_data = clean_data(data)
 
+	cleaned_data
+
+
+@app.cell
+def _(cleaned_data, impute_missing_data):
 	# Impute the missing data
-	imputted_data = impute_missing_data(cleaned_data)
-	return cleaned_data, imputted_data
+	imputed_data = impute_missing_data(cleaned_data)
+
+	imputed_data
+	return cleaned_data, imputed_data
 
 
 if __name__ == "__main__":

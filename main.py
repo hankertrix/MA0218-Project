@@ -41,6 +41,7 @@ def _():
 	return (
 		BayesianRidge,
 		IterativeImputer,
+		SVR,
 		enable_iterative_imputer,
 		mo,
 		np,
@@ -84,6 +85,8 @@ def _():
 		# These two columns below are useless
 		"SCALE",
 		"Decimals",
+		# There is no data for 2011, so just drop it
+		"2011",
 	]
 
 	# The list of series codes for series that have data for most years
@@ -156,6 +159,31 @@ def _():
 		"SH.STA.ACSN",
 	]
 
+	# The list of series codes for problem 1
+	SERIES_CODES_PROBLEM_1 = [
+		"EN.ATM.CO2E.PC",
+		"EN.ATM.CO2E.PP.GD.KD",
+		"EN.ATM.CO2E.KT",
+		"EN.CLC.GHGR.MT.CE",
+		"EN.ATM.METH.KT.CE",
+		"EN.ATM.NOXE.KT.CE",
+		"EN.ATM.GHGO.KT.CE",
+		"EG.USE.PCAP.KG.OE",
+		"EG.USE.COMM.GD.PP.KD",
+	]
+
+	# The list of regions for problem 1
+	REGIONS_PROBLEM_1 = [
+		"East Asia & Pacific",
+		"Europe & Central Asia",
+		"Euro area",
+		"Latin America & Caribbean",
+		"Middle East & North Africa",
+		"South Asia",
+		"Sub-Saharan Africa",
+		"World",
+	]
+
 	# The range of years in the data set.
 	#
 	# There is no data for 2011, so we are skipping it
@@ -180,9 +208,11 @@ def _():
 	return (
 		COLUMNS_TO_DROP,
 		DATA_FILE,
+		REGIONS_PROBLEM_1,
 		SERIES_CODES_EVERY_5_YEARS,
 		SERIES_CODES_EVERY_5_YEARS_PLUS_2008,
 		SERIES_CODES_MOST_YEARS,
+		SERIES_CODES_PROBLEM_1,
 		YEAR_RANGE,
 		YEAR_RANGE_EVERY_5_YEARS,
 		YEAR_RANGE_EVERY_5_YEARS_PLUS_2008,
@@ -229,7 +259,7 @@ def _(
 ):
 	# Create the function to clean the data
 	def clean_data(given_data: pd.DataFrame) -> pd.DataFrame:
-		#
+		"Function to clean up the data."
 
 		# Make a copy of the data
 		cleaned_data = given_data.copy()
@@ -298,7 +328,7 @@ def _(
 ):
 	# Create the function to impute the missing data
 	def impute_missing_data(given_data: pd.DataFrame) -> pd.DataFrame:
-		#
+		"Function to impute the missing data row by row."
 
 		# Initialise the imputer object
 		imputer_object = IterativeImputer(estimator=BayesianRidge())
@@ -332,11 +362,12 @@ def _(
 
 
 @app.cell
-def _(clean_data, data, impute_missing_data):
+def _(clean_data, data):
 	# Clean the data
 	cleaned_data = clean_data(data)
 
 	cleaned_data
+	return (cleaned_data,)
 
 
 @app.cell
@@ -345,7 +376,57 @@ def _(cleaned_data, impute_missing_data):
 	imputed_data = impute_missing_data(cleaned_data)
 
 	imputed_data
-	return cleaned_data, imputed_data
+	return (imputed_data,)
+
+
+@app.cell
+def _(REGIONS_PROBLEM_1, SERIES_CODES_PROBLEM_1, imputed_data, pd):
+	def create_problem_1_data(
+		given_data: pd.DataFrame,
+	) -> dict[str, pd.DataFrame]:
+		"Function to create the data for problem 1."
+
+		# Initialise the dictionary to store the data for problem 1
+		problem_1_data = {}
+
+		# Iterate over all the regions required for problem 1
+		for region in REGIONS_PROBLEM_1:
+			#
+
+			# Get the region data
+			region_data = imputed_data.loc[
+				imputed_data["Country name"] == region
+			]
+
+			# Grab the data that is in the series for problem 1
+			region_data_problem_1 = (
+				region_data.loc[
+					region_data["Series code"].isin(SERIES_CODES_PROBLEM_1)
+				]
+				.drop(columns=["Country name", "Series code"])
+				.reset_index(drop=True)
+			)
+
+			# Pivot the data so that the series name is at the top
+			pivoted_region_data = region_data_problem_1.pivot_table(
+				columns="Series name"
+			)
+
+			# Add the data to the dictionary
+			problem_1_data[region] = pivoted_region_data
+
+		# Return the dictionary containing the data for problem 1
+		return problem_1_data
+
+	return (create_problem_1_data,)
+
+
+@app.cell
+def _(create_problem_1_data, imputed_data):
+	# Create the data for problem 1
+	problem_1_data = create_problem_1_data(imputed_data)
+	problem_1_data
+	return (problem_1_data,)
 
 
 if __name__ == "__main__":

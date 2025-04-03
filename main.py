@@ -181,6 +181,7 @@ def _():
 		"Middle East & North Africa",
 		"South Asia",
 		"Sub-Saharan Africa",
+		"Small island developing states",
 		"World",
 	]
 

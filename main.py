@@ -173,7 +173,7 @@ def _():
 	]
 
 	# The list of regions for problem 1
-	REGIONS_PROBLEM_1 = [
+	REGIONS_FOR_PROBLEM_1 = [
 		"East Asia & Pacific",
 		"Europe & Central Asia",
 		"Euro area",
@@ -209,7 +209,7 @@ def _():
 	return (
 		COLUMNS_TO_DROP,
 		DATA_FILE,
-		REGIONS_PROBLEM_1,
+		REGIONS_FOR_PROBLEM_1,
 		SERIES_CODES_EVERY_5_YEARS,
 		SERIES_CODES_EVERY_5_YEARS_PLUS_2008,
 		SERIES_CODES_MOST_YEARS,
@@ -381,7 +381,7 @@ def _(cleaned_data, impute_missing_data):
 
 
 @app.cell
-def _(REGIONS_PROBLEM_1, SERIES_CODES_PROBLEM_1, pd):
+def _(REGIONS_FOR_PROBLEM_1, SERIES_CODES_PROBLEM_1, pd):
 	def create_problem_1_data(
 		given_data: pd.DataFrame,
 	) -> dict[str, pd.DataFrame]:
@@ -391,7 +391,7 @@ def _(REGIONS_PROBLEM_1, SERIES_CODES_PROBLEM_1, pd):
 		problem_1_data = {}
 
 		# Iterate over all the regions required for problem 1
-		for region in REGIONS_PROBLEM_1:
+		for region in REGIONS_FOR_PROBLEM_1:
 			#
 
 			# Get the region data

@@ -13,12 +13,41 @@
 
 import marimo
 
-__generated_with = "0.11.30"
+__generated_with = "0.12.0"
 app = marimo.App(
 	width="full",
 	app_title="MA0218 Mini Project: The Climate Forum",
 	layout_file="layouts/main.slides.json",
 )
+
+
+@app.cell
+def _():
+	# Import all the required libraries
+	import re
+
+	import marimo as mo
+	import matplotlib.pyplot as plt
+	import numpy as np
+	import pandas as pd
+	import seaborn as sb
+	from sklearn.experimental import enable_iterative_imputer
+	from sklearn.impute import IterativeImputer
+	from sklearn.linear_model import BayesianRidge
+
+	# Set the seaborn style
+	sb.set_theme()
+	return (
+		BayesianRidge,
+		IterativeImputer,
+		enable_iterative_imputer,
+		mo,
+		np,
+		pd,
+		plt,
+		re,
+		sb,
+	)
 
 
 @app.cell
@@ -40,22 +69,6 @@ def _(mo):
 		.text,
 	)
 	return html, md
-
-
-@app.cell
-def _():
-	# Import all the required libraries
-	import re
-
-	import marimo as mo
-	import matplotlib.pyplot as plt
-	import numpy as np
-	import pandas as pd
-	import seaborn as sb
-
-	# Set the seaborn style
-	sb.set_theme()
-	return mo, np, pd, plt, re, sb
 
 
 @app.cell
@@ -215,6 +228,8 @@ def _(
 ):
 	# Create the function to clean the data
 	def clean_data(given_data: pd.DataFrame) -> pd.DataFrame:
+		#
+
 		# Make a copy of the data
 		cleaned_data = given_data.copy()
 
@@ -272,13 +287,35 @@ def _(
 
 
 @app.cell
-def _(html, pd, strip_unnecessary_code):
+def _(
+	BayesianRidge,
+	IterativeImputer,
+	YEAR_RANGE,
+	html,
+	pd,
+	strip_unnecessary_code,
+):
 	# Create the function to impute the missing data
 	def impute_missing_data(given_data: pd.DataFrame) -> pd.DataFrame:
 		#
 
 		# Make a copy of the data
 		imputted_data = given_data.copy()
+
+		# Iterate over the given data
+		for index, row in given_data[YEAR_RANGE].iterrows():
+			#
+
+			# Impute the data for the row
+			imputted_row = IterativeImputer(
+				estimator=BayesianRidge()
+			).fit_transform(list(zip(YEAR_RANGE, row)))
+
+			# Remove the year range from the imputted row
+			imputted_row_data = [value for (_, value) in imputted_row]
+
+			# Set the imputted row data to the imputted data
+			imputted_data.loc[index, YEAR_RANGE] = imputted_row_data
 
 		# Return the imputted data
 		return imputted_data
@@ -288,6 +325,16 @@ def _(html, pd, strip_unnecessary_code):
 		strip_unnecessary_code("return imputted_data")
 	)
 	return impute_missing_data, impute_missing_data_function_code
+
+
+@app.cell
+def _(clean_data, data, impute_missing_data):
+	# Clean the data
+	cleaned_data = clean_data(data)
+
+	# Impute the missing data
+	imputted_data = impute_missing_data(cleaned_data)
+	return cleaned_data, imputted_data
 
 
 if __name__ == "__main__":

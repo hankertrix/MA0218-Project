@@ -81,8 +81,6 @@ def _():
 	COLUMNS_TO_DROP = [
 		# Drop the country code as we are using the country name
 		"Country code",
-		# Drop the series name as we are using the series code
-		"Series name",
 		# These two columns below are useless
 		"SCALE",
 		"Decimals",

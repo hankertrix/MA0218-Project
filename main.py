@@ -381,7 +381,7 @@ def _(cleaned_data, impute_missing_data):
 
 
 @app.cell
-def _(REGIONS_PROBLEM_1, SERIES_CODES_PROBLEM_1, imputed_data, pd):
+def _(REGIONS_PROBLEM_1, SERIES_CODES_PROBLEM_1, pd):
 	def create_problem_1_data(
 		given_data: pd.DataFrame,
 	) -> dict[str, pd.DataFrame]:
@@ -395,9 +395,7 @@ def _(REGIONS_PROBLEM_1, SERIES_CODES_PROBLEM_1, imputed_data, pd):
 			#
 
 			# Get the region data
-			region_data = imputed_data.loc[
-				imputed_data["Country name"] == region
-			]
+			region_data = given_data.loc[given_data["Country name"] == region]
 
 			# Grab the data that is in the series for problem 1
 			region_data_problem_1 = (

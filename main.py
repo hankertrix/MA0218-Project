@@ -13,7 +13,7 @@
 
 import marimo
 
-__generated_with = "0.12.4"
+__generated_with = "0.12.0"
 app = marimo.App(
     width="full",
     app_title="MA0218 Mini Project: The Climate Forum",
@@ -31,9 +31,23 @@ def _():
     import numpy as np
     import pandas as pd
     import seaborn as sb
+    from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor
     from sklearn.experimental import enable_iterative_imputer
     from sklearn.impute import IterativeImputer
-    from sklearn.linear_model import BayesianRidge, LinearRegression, Ridge
+    from sklearn.linear_model import (
+        BayesianRidge,
+        ElasticNet,
+        HuberRegressor,
+        Lasso,
+        LinearRegression,
+        PassiveAggressiveRegressor,
+        RANSACRegressor,
+        Ridge,
+        SGDRegressor,
+        TheilSenRegressor,
+    )
+    from sklearn.metrics import mean_squared_error, r2_score
+    from sklearn.neighbors import KNeighborsRegressor
     from sklearn.svm import SVR, LinearSVR
     from sklearn.tree import DecisionTreeRegressor
 
@@ -41,13 +55,29 @@ def _():
     sb.set_theme()
     return (
         BayesianRidge,
+        DecisionTreeRegressor,
+        ElasticNet,
+        ExtraTreesRegressor,
+        HuberRegressor,
         IterativeImputer,
+        KNeighborsRegressor,
+        Lasso,
+        LinearRegression,
+        LinearSVR,
+        PassiveAggressiveRegressor,
+        RANSACRegressor,
+        RandomForestRegressor,
+        Ridge,
+        SGDRegressor,
         SVR,
+        TheilSenRegressor,
         enable_iterative_imputer,
+        mean_squared_error,
         mo,
         np,
         pd,
         plt,
+        r2_score,
         re,
         sb,
     )
@@ -378,11 +408,6 @@ def _(cleaned_data, impute_missing_data):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""### Are we getting greener or more sustainable?""")
-    return
-
-
 def _(pd):
     def format_data_for_problem(
         given_data: pd.DataFrame,
@@ -423,12 +448,227 @@ def _(pd):
 
 
 @app.cell
-def _(create_problem_1_data, imputed_data, pd):
+def _(
+    REGIONS_FOR_PROBLEM_1,
+    SERIES_CODES_PROBLEM_1,
+    format_data_for_problem,
+    imputed_data,
+):
     # Create the data for problem 1
-    problem_1_data = create_problem_1_data(imputed_data)
-    # import linreg
-    from sklearn.linear_model import LinearRegression
+    problem_1_data = format_data_for_problem(
+        imputed_data, REGIONS_FOR_PROBLEM_1, SERIES_CODES_PROBLEM_1
+    )
+    problem_1_data
+    return (problem_1_data,)
 
+
+@app.cell
+def _(
+    REGIONS_TO_REMOVE_FOR_PROBLEM_2,
+    SERIES_CODES_PROBLEM_2,
+    format_data_for_problem,
+    imputed_data,
+):
+    problem_2_data = format_data_for_problem(
+        imputed_data,
+        imputed_data[
+            ~imputed_data["Country name"].isin(REGIONS_TO_REMOVE_FOR_PROBLEM_2)
+        ]["Country name"].unique(),
+        SERIES_CODES_PROBLEM_2,
+    )
+
+    problem_2_data
+    return (problem_2_data,)
+
+
+@app.cell
+def _(
+    BayesianRidge,
+    DecisionTreeRegressor,
+    ElasticNet,
+    ExtraTreesRegressor,
+    HuberRegressor,
+    KNeighborsRegressor,
+    Lasso,
+    LinearRegression,
+    LinearSVR,
+    RANSACRegressor,
+    RandomForestRegressor,
+    Ridge,
+    SGDRegressor,
+    SVR,
+    cleaned_data,
+    mean_squared_error,
+    np,
+    pd,
+    r2_score,
+):
+    def exploratory_analysis():
+        "Exploratory analysis of machine learning models on the data set."
+
+        # The target country and the data set to regress over
+        target_country = "Singapore"
+
+        # The target series to regress over, which is
+        # GDP ($)
+        target_series = "NY.GDP.MKTP.CD"
+
+        # The list of years
+        years = np.array(range(1990, 2011))
+        years_str = [str(year) for year in years]
+
+        # Reshape the years to make it usable for training
+        x_train = years.reshape(-1, 1)
+
+        # The data to use
+        data = cleaned_data[
+            (cleaned_data["Country name"] == target_country)
+            & (cleaned_data["Series code"] == target_series)
+        ]
+
+        # The training data for the series
+        y_train = data[years_str].values.flatten()
+
+        # Regression models
+        regression_models = {
+            "Linear Regression": LinearRegression(),
+            "Ridge Regression": Ridge(),
+            "Lasso Regression": Lasso(),
+            "Bayesian Ridge": BayesianRidge(),
+            "Elastic Net": ElasticNet(),
+            "Huber Regressor": HuberRegressor(),
+            "RANSAC Regressor": RANSACRegressor(),
+            "Random Forest Regressor": RandomForestRegressor(
+                n_estimators=100, random_state=42
+            ),
+            "Extra Trees Regressor": ExtraTreesRegressor(
+                n_estimators=100, random_state=42
+            ),
+            "SVR (RBF Kernel)": SVR(kernel="rbf"),
+            "SVR (Linear Kernel)": SVR(kernel="linear"),
+            "SVR (Poly Kernel)": SVR(kernel="poly"),
+            "SVR (Sigmoid Kernel)": SVR(kernel="sigmoid"),
+            "Linear SVR": LinearSVR(),
+            "SGD Regression": SGDRegressor(),
+            #
+            # Decision Tree Regressors
+            "Decision Tree Regressor (max depth 1)": DecisionTreeRegressor(
+                max_depth=1
+            ),
+            "Decision Tree Regressor (max depth 2)": DecisionTreeRegressor(
+                max_depth=2
+            ),
+            "Decision Tree Regressor (max depth 3)": DecisionTreeRegressor(
+                max_depth=3
+            ),
+            "Decision Tree Regressor (max depth 4)": DecisionTreeRegressor(
+                max_depth=4
+            ),
+            "Decision Tree Regressor (max depth 5)": DecisionTreeRegressor(
+                max_depth=5
+            ),
+            "Decision Tree Regressor (max depth 6)": DecisionTreeRegressor(
+                max_depth=6
+            ),
+            "Decision Tree Regressor (max depth 7)": DecisionTreeRegressor(
+                max_depth=7
+            ),
+            "Decision Tree Regressor (max depth 8)": DecisionTreeRegressor(
+                max_depth=8
+            ),
+            "Decision Tree Regressor (max depth 9)": DecisionTreeRegressor(
+                max_depth=9
+            ),
+            "Decision Tree Regressor (max depth 10)": DecisionTreeRegressor(
+                max_depth=10
+            ),
+            #
+            # KNN Regressors
+            "KNN Regressor (1 neighbour)": KNeighborsRegressor(n_neighbors=1),
+            "KNN Regressor (2 neighbours)": KNeighborsRegressor(n_neighbors=2),
+            "KNN Regressor (3 neighbours)": KNeighborsRegressor(n_neighbors=3),
+            "KNN Regressor (4 neighbours)": KNeighborsRegressor(n_neighbors=4),
+            "KNN Regressor (5 neighbours)": KNeighborsRegressor(n_neighbors=5),
+            "KNN Regressor (6 neighbours)": KNeighborsRegressor(n_neighbors=6),
+            "KNN Regressor (7 neighbours)": KNeighborsRegressor(n_neighbors=7),
+            "KNN Regressor (8 neighbours)": KNeighborsRegressor(n_neighbors=8),
+            "KNN Regressor (9 neighbours)": KNeighborsRegressor(n_neighbors=9),
+            "KNN Regressor (10 neighbours)": KNeighborsRegressor(
+                n_neighbors=10
+            ),
+        }
+
+        # Get the number of plots on each side
+        number_of_plots = int(np.ceil(np.sqrt(len(regression_models))))
+
+        # Create the figure and the subplots
+        figure, axes = plt.subplots(
+            number_of_plots, number_of_plots, figsize=(32, 32)
+        )
+
+        # Initialise the results
+        results = []
+
+        # Iterate over the regression models
+        for index, (name, model) in enumerate(regression_models.items()):
+            #
+
+            # Fit the model on the data
+            model.fit(x_train, y_train)
+
+            # Get the prediction from the model
+            prediction = model.predict(x_train)
+
+            # Get the R squared score
+            r_squared = r2_score(y_train, prediction)
+
+            # Get the mean squared error and root mean squared error
+            mse = mean_squared_error(y_train, prediction)
+            rmse = np.sqrt(mse)
+
+            # Append metrics to the list
+            results.append(
+                {
+                    "Model": name,
+                    "R squared score": r_squared,
+                    "MSE": mse,
+                    "RMSE": rmse,
+                }
+            )
+
+            # Get the axis of the subplot
+            axis = axes.flat[index]
+
+            # Plot the data and the prediction
+            axis.plot(x_train, y_train)
+            axis.plot(x_train, prediction)
+
+            # Set the title to the model
+            axis.set_title(name)
+
+        # Put the data into a data frame
+        results_dataframe = (
+            pd.DataFrame(results)
+            .sort_values(by="R squared score", ascending=False)
+            .reset_index(drop=True)
+        )
+
+        # Return the results dataframe
+        return results_dataframe, figure
+
+    # Run the exploratory analysis
+    exploratory_analysis()
+    return (exploratory_analysis,)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""### Are we getting greener or more sustainable?""")
+    return
+
+
+@app.cell
+def _(LinearRegression, YEAR_RANGE, pd, problem_1_data):
     # create model object
     model = LinearRegression()
 
@@ -465,7 +705,7 @@ def _(create_problem_1_data, imputed_data, pd):
     # plt.scatter(timeline,world_data_c02)
     # plt.plot(regline_x, regline_y, 'r-', linewidth = 3)
     # plt.show()
-    return LinearRegression, model, problem_1_data, timeline
+    return model, timeline, var, world_data, world_data_c02
 
 
 @app.cell
@@ -476,22 +716,24 @@ def _(problem_1_data):
 
 @app.cell
 def _(model, plt, timeline, world_data):
-    count = 0
-    f, axes = plt.subplots(1, 8, figsize=(18, 30))
-    for i in world_data:
-        data1 = world_data[i]
-        # train linreg
-        model.fit(timeline, data1)
-        regline_x = timeline
-        regline_y = model.predict(regline_x)
+    def _():
+        count = 0
+        f, axes = plt.subplots(1, 8, figsize=(18, 30))
+        for i in world_data:
+            data1 = world_data[i]
+            # train linreg
+            model.fit(timeline, data1)
+            regline_x = timeline
+            regline_y = model.predict(regline_x)
 
-        # visualise the data regression
-        axes[count].scatter(timeline, data1)
-        axes[count].plot(regline_x, regline_y, "r-", linewidth=3)
-        count += 1
+            # visualise the data regression
+            axes[count].scatter(timeline, data1)
+            axes[count].plot(regline_x, regline_y, "r-", linewidth=3)
+            count += 1
+        return plt.show()
 
-    plt.show()
-    return axes, count, data1, f, i, regline_x, regline_y
+    _()
+    return
 
 
 @app.cell
@@ -550,28 +792,30 @@ def _():
 
 @app.cell
 def _(model, plt, problem_1_data, timeline):
-    for j in problem_1_data:
-        f, axes = plt.subplots(1, 8, figsize=(36, 8))
-        jdata = problem_1_data[j]
-        counti = 0
-        print("Country: ", j)
-        for i in jdata:
-            datai = jdata[i]
-            print(datai.describe())
-            # train linreg
-            model.fit(timeline, datai)
-            regline_x = timeline
-            regline_y = model.predict(regline_x)
+    def _():
+        for j in problem_1_data:
+            f, axes = plt.subplots(1, 8, figsize=(36, 8))
+            jdata = problem_1_data[j]
+            counti = 0
+            print("Country: ", j)
+            for i in jdata:
+                datai = jdata[i]
+                print(datai.describe())
+                # train linreg
+                model.fit(timeline, datai)
+                regline_x = timeline
+                regline_y = model.predict(regline_x)
 
-            # visualise the data regression
-            axes[counti].scatter(timeline, datai)
-            axes[counti].plot(regline_x, regline_y, "r-", linewidth=3)
-            axes[counti].set_xlabel("Timeline")
-            axes[counti].set_ylabel(i)
-            counti += 1
-        plt.show()
+                # visualise the data regression
+                axes[counti].scatter(timeline, datai)
+                axes[counti].plot(regline_x, regline_y, "r-", linewidth=3)
+                axes[counti].set_xlabel("Timeline")
+                axes[counti].set_ylabel(i)
+                counti += 1
+        return plt.show()
 
-    return axes, counti, datai, f, i, j, jdata, regline_x, regline_y
+    _()
+    return
 
 
 @app.cell
@@ -581,41 +825,7 @@ def _(mo):
 
 
 @app.cell
-def _(
-    REGIONS_FOR_PROBLEM_1,
-    SERIES_CODES_PROBLEM_1,
-    format_data_for_problem,
-    imputed_data,
-):
-    # Create the data for problem 1
-    problem_1_data = format_data_for_problem(
-        imputed_data, REGIONS_FOR_PROBLEM_1, SERIES_CODES_PROBLEM_1
-    )
-    problem_1_data
-    return (problem_1_data,)
-
-
-@app.cell
-def _(
-    REGIONS_TO_REMOVE_FOR_PROBLEM_2,
-    SERIES_CODES_PROBLEM_2,
-    format_data_for_problem,
-    imputed_data,
-):
-    problem_2_data = format_data_for_problem(
-        imputed_data,
-        imputed_data[
-            ~imputed_data["Country name"].isin(REGIONS_TO_REMOVE_FOR_PROBLEM_2)
-        ]["Country name"].unique(),
-        SERIES_CODES_PROBLEM_2,
-    )
-
-    problem_2_data
-    return (problem_2_data,)
-
-
-@app.cell
-def _(SVR, pd, problem_2_data):
+def _(DecisionTreeRegressor, LinearSVR, Ridge, np, pd, plt, problem_2_data):
     svr_model = LinearSVR()
     linear_model = Ridge()
     decision_tree_model = DecisionTreeRegressor(max_depth=2)
@@ -634,7 +844,17 @@ def _(SVR, pd, problem_2_data):
     plt.figure(figsize=(16, 8))
     plt.plot(years, train_data)
     plt.plot(new_years, prediction, "r-", linewidth=3)
-    return co2_data, svr_model
+    return (
+        co2_data,
+        decision_tree_model,
+        linear_model,
+        new_years,
+        prediction,
+        svr_model,
+        train_data,
+        years,
+        years_str,
+    )
 
 
 if __name__ == "__main__":

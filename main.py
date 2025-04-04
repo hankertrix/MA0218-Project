@@ -101,7 +101,7 @@ def _(mo):
 
 
 @app.cell
-def _():
+def _(np):
     # The constants used in the program
     DATA_FILE = "./data.xls"
 
@@ -237,7 +237,8 @@ def _():
     # The range of years in the data set.
     #
     # There is no data for 2011, so we are skipping it
-    YEAR_RANGE = [str(year) for year in range(1990, 2010 + 1)]
+    YEAR_RANGE = np.array(list(range(1990, 2010 + 1)))
+    YEAR_RANGE_STR = [str(year) for year in YEAR_RANGE]
     return (
         COLUMNS_TO_DROP,
         DATA_FILE,
@@ -246,6 +247,7 @@ def _():
         SERIES_CODES_PROBLEM_1,
         SERIES_CODES_PROBLEM_2,
         YEAR_RANGE,
+        YEAR_RANGE_STR,
     )
 
 
@@ -277,7 +279,7 @@ def _(DATA_FILE, html, md, mo, pd):
 def _(
     COLUMNS_TO_DROP,
     SERIES_CODES_PROBLEM_2,
-    YEAR_RANGE,
+    YEAR_RANGE_STR,
     data,
     html,
     mo,
@@ -299,18 +301,18 @@ def _(
         cleaned_data.drop(COLUMNS_TO_DROP, axis=1, inplace=True)
 
         # Coerce all the data in the columns for the years to numeric
-        cleaned_data[YEAR_RANGE] = cleaned_data[YEAR_RANGE].apply(
+        cleaned_data[YEAR_RANGE_STR] = cleaned_data[YEAR_RANGE_STR].apply(
             lambda elem: pd.to_numeric(elem, errors="coerce")
         )
 
         # Replace all infinity values with NaNs
-        cleaned_data[YEAR_RANGE] = cleaned_data[YEAR_RANGE].replace(
+        cleaned_data[YEAR_RANGE_STR] = cleaned_data[YEAR_RANGE_STR].replace(
             [np.inf, -np.inf], np.nan
         )
 
         # Drop all the rows in the years that have all their values as NaNs
         cleaned_data.drop(
-            cleaned_data[cleaned_data[YEAR_RANGE].isna().all(axis=1)].index,
+            cleaned_data[cleaned_data[YEAR_RANGE_STR].isna().all(axis=1)].index,
             inplace=True,
         )
 
@@ -343,9 +345,9 @@ def _(
 
 @app.cell
 def _(
-    BayesianRidge,
     IterativeImputer,
-    YEAR_RANGE,
+    LinearRegression,
+    YEAR_RANGE_STR,
     html,
     pd,
     strip_unnecessary_code,
@@ -355,25 +357,25 @@ def _(
         "Function to impute the missing data row by row."
 
         # Initialise the imputer object
-        imputer_object = IterativeImputer(estimator=BayesianRidge())
+        imputer_object = IterativeImputer(estimator=LinearRegression())
 
         # Make a copy of the data
         imputed_data = given_data.copy()
 
         # Iterate over the given data
-        for index, row in given_data[YEAR_RANGE].iterrows():
+        for index, row in given_data[YEAR_RANGE_STR].iterrows():
             #
 
             # Impute the data for the row
             imputed_row = imputer_object.fit_transform(
-                list(zip(YEAR_RANGE, row))
+                list(zip(YEAR_RANGE_STR, row))
             )
 
             # Remove the year range from the imputed row
             imputed_row_data = [value for (_, value) in imputed_row]
 
             # Set the imputed row data to the imputed data
-            imputed_data.loc[index, YEAR_RANGE] = imputed_row_data
+            imputed_data.loc[index, YEAR_RANGE_STR] = imputed_row_data
 
         # Return the imputed data
         return imputed_data
@@ -439,6 +441,7 @@ def _(pd):
 
         # Return the dictionary containing the formatted data
         return formatted_data
+
     return (format_data_for_problem,)
 
 
@@ -473,6 +476,8 @@ def _(
     Ridge,
     SGDRegressor,
     SVR,
+    YEAR_RANGE,
+    YEAR_RANGE_STR,
     cleaned_data,
     mean_squared_error,
     np,
@@ -490,12 +495,8 @@ def _(
         # GDP ($)
         target_series = "NY.GDP.MKTP.CD"
 
-        # The list of years
-        years = np.array(range(1990, 2011))
-        years_str = [str(year) for year in years]
-
         # Reshape the years to make it usable for training
-        x_train = years.reshape(-1, 1)
+        x_train = YEAR_RANGE.reshape(-1, 1)
 
         # The data to use
         data = cleaned_data[
@@ -504,7 +505,7 @@ def _(
         ]
 
         # The training data for the series
-        y_train = data[years_str].values.flatten()
+        y_train = data[YEAR_RANGE_STR].values.flatten()
 
         # Regression models
         regression_models = {
@@ -645,47 +646,6 @@ def _(mo):
 
 
 @app.cell
-def _(LinearRegression, YEAR_RANGE, pd, problem_1_data):
-    # create model object
-    model = LinearRegression()
-
-    # prepare data for testing
-    timeline = pd.DataFrame(YEAR_RANGE)
-    world_data = problem_1_data["World"]
-    var = [
-        "CO2 emissions per capita (metric tons)",
-        "CO2 emissions per units of GDP (kg/$1,000 of 2005 PPP $)",
-        "CO2 emissions, total (KtCO2)",
-        "GHG net emissions/removals by LUCF (MtCO2e)",
-        "Methane (CH4) emissions, total (KtCO2e)",
-        "Nitrous oxide (N2O) emissions, total (KtCO2e)",
-        "Other GHG emissions, total (KtCO2e)",
-        "Energy use per capita (kilograms of oil equivalent)",
-        "Energy use per units of GDP (kg oil eq./$1,000 of 2005 PPP $)",
-    ]
-
-    world_data_c02 = pd.DataFrame(
-        world_data["CO2 emissions per capita (metric tons)"]
-    )
-    # timeline_train = pd.DataFrame(timeline[:16])
-    # world_data_c02_train = pd.DataFrame(world_data_c02[:16])
-    # timeline_test = pd.DataFrame(timeline[-5:])
-    # world_data_c02_test = pd.DataFrame(world_data_c02[-5:])
-
-    # train linreg
-    # model.fit(timeline, world_data_c02)
-    # regline_x = timeline
-    # regline_y = model.predict(regline_x)
-
-    # # visualise the data regression
-    # f = plt.figure()
-    # plt.scatter(timeline,world_data_c02)
-    # plt.plot(regline_x, regline_y, 'r-', linewidth = 3)
-    # plt.show()
-    return model, timeline, var, world_data, world_data_c02
-
-
-@app.cell
 def _(problem_1_data):
     problem_1_data
     return
@@ -714,12 +674,6 @@ def _(model, plt, timeline, world_data):
 
 
 @app.cell
-def _(problem_1_data):
-    problem_1_data
-    return
-
-
-@app.cell
 def _(model, np, timeline_train, world_data_c02_train):
     # Checking goodness of fit
     # Explained Variance (R^2)
@@ -737,34 +691,6 @@ def _(model, np, timeline_train, world_data_c02_train):
     print("Mean Squared Error (MSE) \t:", mse)
     print("Root Mean Squared Error (RMSE) \t:", np.sqrt(mse))
     return mean_sq_err, mse
-
-
-@app.cell
-def _():
-    # countj = 0
-    # f, axes = plt.subplots(9,8,figsize=(36,64))
-    # for j in problem_1_data:
-    #     jdata = problem_1_data[j]
-    #     counti = 0
-    #     print ("Country: ",j)
-    #     for i in jdata:
-    #         datai = jdata[i]
-    #         print(datai.describe())
-    #         # train linreg
-    #         model.fit(timeline, datai)
-    #         regline_x = timeline
-    #         regline_y = model.predict(regline_x)
-
-    #         # visualise the data regression
-    #         axes[countj][counti].scatter(timeline,datai)
-    #         axes[countj][counti].plot(regline_x, regline_y, 'r-', linewidth = 3)
-    #         axes[countj][counti].set_xlabel("Timeline")
-    #         axes[countj][counti].set_ylabel(i)
-    #         counti += 1
-    #     countj += 1
-
-    # plt.show()
-    return
 
 
 @app.cell
@@ -865,17 +791,20 @@ def _(LinearRegression, np, pd, problem_2_data, timeline):
         row += 1
         country_predictions = {}  # Temporary dictionary to store predictions for this country
         for series in Country_data:
-            Series_data= pd.DataFrame(Country_data[str(series)])  
-            linreg=LinearRegression()
+            Series_data = pd.DataFrame(Country_data[str(series)])
+            linreg = LinearRegression()
             linreg.fit(timeline, Series_data)
             predicted_value_2025 = linreg.predict(np.array([[2025]]))
-            country_predictions[series] = predicted_value_2025[0][0]  # Store the prediction
+            country_predictions[series] = predicted_value_2025[0][
+                0
+            ]  # Store the prediction
             column += 1
-        predictions_df = predictions_df._append(pd.Series(country_predictions, name=country))
-        
+        predictions_df = predictions_df._append(
+            pd.Series(country_predictions, name=country)
+        )
+
     # Print the final DataFrame
     predictions_df
-
 
     return (
         Country_data,
@@ -889,11 +818,6 @@ def _(LinearRegression, np, pd, problem_2_data, timeline):
         row,
         series,
     )
-
-
-@app.cell
-def _():
-    return
 
 
 if __name__ == "__main__":

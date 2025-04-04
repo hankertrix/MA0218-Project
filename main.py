@@ -13,12 +13,8 @@
 
 import marimo
 
-__generated_with = "0.12.0"
-app = marimo.App(
-    width="full",
-    app_title="MA0218 Mini Project: The Climate Forum",
-    layout_file="layouts/main.slides.json",
-)
+__generated_with = "0.12.4"
+app = marimo.App(width="medium")
 
 
 @app.cell
@@ -443,7 +439,6 @@ def _(pd):
 
         # Return the dictionary containing the formatted data
         return formatted_data
-
     return (format_data_for_problem,)
 
 
@@ -460,25 +455,6 @@ def _(
     )
     problem_1_data
     return (problem_1_data,)
-
-
-@app.cell
-def _(
-    REGIONS_TO_REMOVE_FOR_PROBLEM_2,
-    SERIES_CODES_PROBLEM_2,
-    format_data_for_problem,
-    imputed_data,
-):
-    problem_2_data = format_data_for_problem(
-        imputed_data,
-        imputed_data[
-            ~imputed_data["Country name"].isin(REGIONS_TO_REMOVE_FOR_PROBLEM_2)
-        ]["Country name"].unique(),
-        SERIES_CODES_PROBLEM_2,
-    )
-
-    problem_2_data
-    return (problem_2_data,)
 
 
 @app.cell
@@ -501,6 +477,7 @@ def _(
     mean_squared_error,
     np,
     pd,
+    plt,
     r2_score,
 ):
     def exploratory_analysis():
@@ -663,7 +640,7 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md(r"""### Are we getting greener or more sustainable?""")
+    mo.md(r"### Are we getting greener or more sustainable?")
     return
 
 
@@ -819,12 +796,6 @@ def _(model, plt, problem_1_data, timeline):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""### Which should i move to in the future?""")
-    return
-
-
-@app.cell
 def _(DecisionTreeRegressor, LinearSVR, Ridge, np, pd, plt, problem_2_data):
     svr_model = LinearSVR()
     linear_model = Ridge()
@@ -855,6 +826,74 @@ def _(DecisionTreeRegressor, LinearSVR, Ridge, np, pd, plt, problem_2_data):
         years,
         years_str,
     )
+
+
+@app.cell
+def _(mo):
+    mo.md(r"### Which should i move to in the future?")
+    return
+
+
+@app.cell
+def _(
+    REGIONS_TO_REMOVE_FOR_PROBLEM_2,
+    SERIES_CODES_PROBLEM_2,
+    format_data_for_problem,
+    imputed_data,
+):
+    problem_2_data = format_data_for_problem(
+        imputed_data,
+        imputed_data[
+            ~imputed_data["Country name"].isin(REGIONS_TO_REMOVE_FOR_PROBLEM_2)
+        ]["Country name"].unique(),
+        SERIES_CODES_PROBLEM_2,
+    )
+
+    problem_2_data
+    return (problem_2_data,)
+
+
+@app.cell
+def _(LinearRegression, np, pd, problem_2_data, timeline):
+    # Extracting exact sets of data from problem_2_data for analysis
+    predictions_df = pd.DataFrame()
+    row = 0
+    column = 0
+    for country in problem_2_data:
+        # Extract the data for the country
+        Country_data = pd.DataFrame(problem_2_data[str(country)])
+        row += 1
+        country_predictions = {}  # Temporary dictionary to store predictions for this country
+        for series in Country_data:
+            Series_data= pd.DataFrame(Country_data[str(series)])  
+            linreg=LinearRegression()
+            linreg.fit(timeline, Series_data)
+            predicted_value_2025 = linreg.predict(np.array([[2025]]))
+            country_predictions[series] = predicted_value_2025[0][0]  # Store the prediction
+            column += 1
+        predictions_df = predictions_df._append(pd.Series(country_predictions, name=country))
+        
+    # Print the final DataFrame
+    predictions_df
+
+
+    return (
+        Country_data,
+        Series_data,
+        column,
+        country,
+        country_predictions,
+        linreg,
+        predicted_value_2025,
+        predictions_df,
+        row,
+        series,
+    )
+
+
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":

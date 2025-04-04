@@ -381,6 +381,12 @@ def _(cleaned_data, impute_missing_data):
 
 
 @app.cell
+def _(mo):
+    mo.md(r"""### Are we getting greener or more sustainable?""")
+    return
+
+
+@app.cell
 def _(REGIONS_FOR_PROBLEM_1, SERIES_CODES_PROBLEM_1, pd):
     def create_problem_1_data(
     	given_data: pd.DataFrame,
@@ -430,18 +436,17 @@ def _(create_problem_1_data, imputed_data, pd):
 
     # prepare data for testing
     timeline = pd.DataFrame([1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010])
-    world_data = problem_1_data["World"]
-    var = ["CO2 emissions per capita (metric tons)",
-    "CO2 emissions per units of GDP (kg/$1,000 of 2005 PPP $)",
-    "CO2 emissions, total (KtCO2)",
-    "GHG net emissions/removals by LUCF (MtCO2e)",
-    "Methane (CH4) emissions, total (KtCO2e)",
-    "Nitrous oxide (N2O) emissions, total (KtCO2e)",
-    "Other GHG emissions, total (KtCO2e)",
-    "Energy use per capita (kilograms of oil equivalent)",
-    "Energy use per units of GDP (kg oil eq./$1,000 of 2005 PPP $)"]
+    # var = ["CO2 emissions per capita (metric tons)",
+    # "CO2 emissions per units of GDP (kg/$1,000 of 2005 PPP $)",
+    # "CO2 emissions, total (KtCO2)",
+    # "GHG net emissions/removals by LUCF (MtCO2e)",
+    # "Methane (CH4) emissions, total (KtCO2e)",
+    # "Nitrous oxide (N2O) emissions, total (KtCO2e)",
+    # "Other GHG emissions, total (KtCO2e)",
+    # "Energy use per capita (kilograms of oil equivalent)",
+    # "Energy use per units of GDP (kg oil eq./$1,000 of 2005 PPP $)"]
 
-    world_data_c02= pd.DataFrame(world_data["CO2 emissions per capita (metric tons)"])
+    # world_data_c02= pd.DataFrame(world_data["CO2 emissions per capita (metric tons)"])
     # timeline_train = pd.DataFrame(timeline[:16])
     # world_data_c02_train = pd.DataFrame(world_data_c02[:16])
     # timeline_test = pd.DataFrame(timeline[-5:])
@@ -457,68 +462,72 @@ def _(create_problem_1_data, imputed_data, pd):
     # plt.scatter(timeline,world_data_c02)
     # plt.plot(regline_x, regline_y, 'r-', linewidth = 3)
     # plt.show()
-    return (
-        LinearRegression,
-        model,
-        problem_1_data,
-        timeline,
-        var,
-        world_data,
-        world_data_c02,
-    )
+    return LinearRegression, model, problem_1_data, timeline
 
 
 @app.cell
 def _(problem_1_data):
     problem_1_data
     return
-
-
-@app.cell
-def _(model, plt, timeline, world_data):
-    count = 0
-    f, axes = plt.subplots(1,8,figsize=(18,30))
-    for i in world_data:
-        data1 = world_data[i]
-        # train linreg
-        model.fit(timeline, data1)
-        regline_x = timeline
-        regline_y = model.predict(regline_x)
-
-        # visualise the data regression
-        axes[count].scatter(timeline,data1)
-        axes[count].plot(regline_x, regline_y, 'r-', linewidth = 3)
-        count += 1
-
-    plt.show()
-    return axes, count, data1, f, i, regline_x, regline_y
-
-
-@app.cell
-def _(problem_1_data):
-    problem_1_data
-    return
-
-
-@app.cell
-def _(model, np, timeline_train, world_data_c02_train):
-    # Checking goodness of fit
-    # Explained Variance (R^2)
-    print("Explained Variance (R^2) \t:", model.score(timeline_train, world_data_c02_train))
-
-    # Mean Squared Error (MSE)
-    def mean_sq_err(actual, predicted):
-        '''Returns the Mean Squared Error of actual and predicted values'''
-        return np.mean(np.square(np.array(actual) - np.array(predicted)))
-
-    mse = mean_sq_err(world_data_c02_train, model.predict(world_data_c02_train))
-    print("Mean Squared Error (MSE) \t:", mse)
-    print("Root Mean Squared Error (RMSE) \t:", np.sqrt(mse))
-    return mean_sq_err, mse
 
 
 @app.cell
 def _():
+    # countj = 0
+    # f, axes = plt.subplots(9,8,figsize=(36,64))
+    # for j in problem_1_data:
+    #     jdata = problem_1_data[j]
+    #     counti = 0
+    #     print ("Country: ",j)
+    #     for i in jdata:
+    #         datai = jdata[i]
+    #         print(datai.describe())
+    #         # train linreg
+    #         model.fit(timeline, datai)
+    #         regline_x = timeline
+    #         regline_y = model.predict(regline_x)
+    
+    #         # visualise the data regression
+    #         axes[countj][counti].scatter(timeline,datai)
+    #         axes[countj][counti].plot(regline_x, regline_y, 'r-', linewidth = 3)
+    #         axes[countj][counti].set_xlabel("Timeline")
+    #         axes[countj][counti].set_ylabel(i)
+    #         counti += 1
+    #     countj += 1
+
+    # plt.show()
+    return
+
+
+@app.cell
+def _(model, plt, problem_1_data, timeline):
+    for j in problem_1_data:
+        f, axes = plt.subplots(1,8,figsize=(36,8))
+        jdata = problem_1_data[j]
+        counti = 0
+        print ("Country: ",j)
+        for i in jdata:
+            datai = jdata[i]
+            print(datai.describe())
+            # train linreg
+            model.fit(timeline, datai)
+            regline_x = timeline
+            regline_y = model.predict(regline_x)
+    
+            # visualise the data regression
+            axes[counti].scatter(timeline,datai)
+            axes[counti].plot(regline_x, regline_y, 'r-', linewidth = 3)
+            axes[counti].set_xlabel("Timeline")
+            axes[counti].set_ylabel(i)
+            counti += 1
+        plt.show()
+
+    return axes, counti, datai, f, i, j, jdata, regline_x, regline_y
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""### Which should i move to in the future?""")
     return
 
 

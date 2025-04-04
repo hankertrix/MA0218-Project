@@ -13,23 +13,27 @@
 
 import marimo
 
-__generated_with = "0.12.4"
-app = marimo.App(width="medium")
+__generated_with = "0.12.0"
+app = marimo.App(width="medium", layout_file="layouts/main.slides.json")
 
 
 @app.cell
 def _():
     # Import all the required libraries
     import re
+    from operator import itemgetter
 
     import marimo as mo
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
     import seaborn as sb
+    from matplotlib.ticker import StrMethodFormatter
     from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor
     from sklearn.experimental import enable_iterative_imputer
+    from sklearn.gaussian_process import GaussianProcessRegressor
     from sklearn.impute import IterativeImputer
+    from sklearn.isotonic import IsotonicRegression
     from sklearn.linear_model import (
         BayesianRidge,
         ElasticNet,
@@ -44,6 +48,8 @@ def _():
     )
     from sklearn.metrics import mean_squared_error, r2_score
     from sklearn.neighbors import KNeighborsRegressor
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import PolynomialFeatures
     from sklearn.svm import SVR, LinearSVR
     from sklearn.tree import DecisionTreeRegressor
 
@@ -54,20 +60,26 @@ def _():
         DecisionTreeRegressor,
         ElasticNet,
         ExtraTreesRegressor,
+        GaussianProcessRegressor,
         HuberRegressor,
+        IsotonicRegression,
         IterativeImputer,
         KNeighborsRegressor,
         Lasso,
         LinearRegression,
         LinearSVR,
         PassiveAggressiveRegressor,
+        PolynomialFeatures,
         RANSACRegressor,
         RandomForestRegressor,
         Ridge,
         SGDRegressor,
         SVR,
+        StrMethodFormatter,
         TheilSenRegressor,
         enable_iterative_imputer,
+        itemgetter,
+        make_pipeline,
         mean_squared_error,
         mo,
         np,
@@ -82,20 +94,27 @@ def _():
 @app.cell
 def _(mo):
     # Create a function to more easily create HTML
-    def html(*args: str) -> mo.Html:
-        return mo.Html("\n".join(args))
+    def html(*args):
+        return mo.Html(
+            "\n".join(
+                [arg if isinstance(arg, str) else arg.text for arg in args]
+            )
+        )
 
     # Create a function to more easily create markdown
-    def md(*args: str) -> mo.md:
-        return mo.md("\n".join(args))
+    def md(*args):
+        return mo.md(
+            "\n".join(
+                [arg if isinstance(arg, str) else arg.text for arg in args]
+            )
+        )
 
     html(
-        md("# MA0218 Mini Project:").center().text,
-        html("<h1>The Climate Forum</h1>").center().style(color="#3CB034").text,
+        md("# MA0218 Mini Project:").center(),
+        html("<h1>The Climate Forum</h1>").center().style(color="#3CB034"),
         md("By: Nicholas, Haziq, Dylan and Jun Feng")
         .center()
-        .style(padding="5em")
-        .text,
+        .style(padding="5em"),
     )
     return html, md
 
@@ -104,6 +123,9 @@ def _(mo):
 def _(np):
     # The constants used in the program
     DATA_FILE = "./data.xls"
+
+    # The table page size to use
+    TABLE_PAGE_SIZE = 20
 
     # The list of columns to drop
     COLUMNS_TO_DROP = [
@@ -136,8 +158,50 @@ def _(np):
         "EG.USE.COMM.GD.PP.KD",
     ]
 
+    # The map of the series code to its multiplier for problem 2
+    SERIES_CODE_TO_MULTIPLIER_MAP = {
+        # Access to improved sanitation (% of total pop.)
+        "SH.STA.ACSN": 1,
+        # Access to improved water source (% of total pop.)
+        "SH.H2O.SAFE.ZS": 1,
+        # CO2 emissions per capita (metric tons)
+        "EN.ATM.CO2E.PC": -1,
+        # CO2 emissions per units of GDP (kg/$1,000 of 2005 PPP $)
+        "EN.ATM.CO2E.PP.GD.KD": -1,
+        # CO2 emissions, total (KtCO2)
+        "EN.ATM.CO2E.KT": -1,
+        # Cereal yield (kg per hectare)
+        "AG.YLD.CREL.KG": 1,
+        # Foreign direct investment, net inflows (% of GDP)
+        "BX.KLT.DINV.WD.GD.ZS": 1,
+        # GDP ($)
+        "NY.GDP.MKTP.CD": 1,
+        # GNI per capita (Atlas $)
+        "NY.GNP.PCAP.CD": 1,
+        # Nationally terrestrial protected areas (% of total land area)
+        "ER.LND.PTLD.ZS": 1,
+        # Paved roads (% of total roads)
+        "IS.ROD.PAVE.ZS": 1,
+        # Physicians (per 1,000 people)
+        "SH.MED.PHYS.ZS": 1,
+        # Ratio of girls to boys in primary & secondary school (%)
+        "SE.ENR.PRSC.FM.ZS": 1,
+        # Under-five mortality rate (per 1,000)
+        "SH.DYN.MORT": -1,
+        # Energy use per capita (kilograms of oil equivalent)
+        "EG.USE.PCAP.KG.OE": -1,
+        # Energy use per units of GDP (kg oil eq./$1,000 of 2005 PPP $)
+        "EG.USE.COMM.GD.PP.KD": -1,
+        # Methane (CH4) emissions, total (KtCO2e)
+        "EN.ATM.METH.KT.CE": -1,
+        # Nitrous oxide (N2O) emissions, total (KtCO2e)
+        "EN.ATM.NOXE.KT.CE": -1,
+        # Other GHG emissions, total (KtCO2e)
+        "EN.ATM.GHGO.KT.CE": -1,
+    }
+
     # The list of all the series codes needed
-    SERIES_CODES_PROBLEM_2 = [
+    SERIES_CODES = [
         #
         # Mostly complete data
         #
@@ -244,41 +308,75 @@ def _(np):
         DATA_FILE,
         REGIONS_FOR_PROBLEM_1,
         REGIONS_TO_REMOVE_FOR_PROBLEM_2,
+        SERIES_CODES,
         SERIES_CODES_PROBLEM_1,
-        SERIES_CODES_PROBLEM_2,
+        SERIES_CODE_TO_MULTIPLIER_MAP,
+        TABLE_PAGE_SIZE,
         YEAR_RANGE,
         YEAR_RANGE_STR,
     )
 
 
 @app.cell
-def _(DATA_FILE, html, md, mo, pd):
+def _(DATA_FILE, pd):
     # Read the data from the data file
-    data = pd.read_excel(DATA_FILE)
+    climate_change_excel_sheet = pd.read_excel(DATA_FILE, sheet_name=None)
+
+    # Get the data from the excel sheet
+    data = climate_change_excel_sheet["Data"]
+    country_descriptions = climate_change_excel_sheet["Country"]
+    series_descriptions = climate_change_excel_sheet["Series"]
 
     # Convert all the column names to string
     data.columns = data.columns.astype(str)
+    return (
+        climate_change_excel_sheet,
+        country_descriptions,
+        data,
+        series_descriptions,
+    )
 
+
+@app.cell
+def _(series_descriptions):
+    # Create the map from the series code to the series name
+    SERIES_CODE_TO_NAME_MAP = dict(
+        zip(
+            series_descriptions["Series code"],
+            series_descriptions["Series name"],
+        )
+    )
+
+    # Create the map from the series name to the series code
+    SERIES_NAME_TO_CODE_MAP = dict(
+        zip(
+            series_descriptions["Series name"],
+            series_descriptions["Series code"],
+        )
+    )
+    return SERIES_CODE_TO_NAME_MAP, SERIES_NAME_TO_CODE_MAP
+
+
+@app.cell
+def _(TABLE_PAGE_SIZE, data, html, md, mo):
     # Display the slide contents
     html(
-        md("## Data set").text,
+        md("## Data set"),
         html(
             "<p>",
             "The data set used is the climate change data set.",
             "Have a look at the data set in the table below:",
             "</p>",
-        )
-        .style(padding="10px 0px")
-        .text,
-        mo.ui.table(data, page_size=200).text,
+        ).style(padding="10px 0px"),
+        mo.ui.table(data, selection=None, page_size=TABLE_PAGE_SIZE),
     )
-    return (data,)
+    return
 
 
 @app.cell
 def _(
     COLUMNS_TO_DROP,
-    SERIES_CODES_PROBLEM_2,
+    SERIES_CODES,
     YEAR_RANGE_STR,
     data,
     html,
@@ -318,9 +416,7 @@ def _(
 
         # Drop all the rows with series we don't need
         cleaned_data.drop(
-            cleaned_data[
-                ~cleaned_data["Series code"].isin(SERIES_CODES_PROBLEM_2)
-            ].index,
+            cleaned_data[~cleaned_data["Series code"].isin(SERIES_CODES)].index,
             inplace=True,
         )
 
@@ -347,8 +443,10 @@ def _(
 def _(
     IterativeImputer,
     LinearRegression,
+    PolynomialFeatures,
     YEAR_RANGE_STR,
     html,
+    make_pipeline,
     pd,
     strip_unnecessary_code,
 ):
@@ -357,7 +455,9 @@ def _(
         "Function to impute the missing data row by row."
 
         # Initialise the imputer object
-        imputer_object = IterativeImputer(estimator=LinearRegression())
+        imputer_object = IterativeImputer(
+            estimator=make_pipeline(PolynomialFeatures(3), LinearRegression())
+        )
 
         # Make a copy of the data
         imputed_data = given_data.copy()
@@ -446,18 +546,31 @@ def _(pd):
 
 
 @app.cell
-def _(
-    REGIONS_FOR_PROBLEM_1,
-    SERIES_CODES_PROBLEM_1,
-    format_data_for_problem,
-    imputed_data,
-):
-    # Create the data for problem 1
-    problem_1_data = format_data_for_problem(
-        imputed_data, REGIONS_FOR_PROBLEM_1, SERIES_CODES_PROBLEM_1
+def _(md):
+    md("# Exploratory Analysis")
+    return
+
+
+@app.cell
+def _(md):
+    md(
+        md("## Exploratory Analysis: Procedure").style(padding="10px 0px"),
+        md(
+            "Below are the steps we followed to explore the data:",
+            "",
+            "1. Run through the data in Excel and note that the data",
+            "is time series with data of at most 20 years.",
+            "",
+            "2. With such a small number of data points,",
+            "a list of regression models was collated from Scikit-Learn",
+            "to assess the ability of machine learning models to fit",
+            "the data properly.",
+            "",
+            "3. Write code to evaluate model performance",
+            "on one series and compare the results.",
+        ),
     )
-    problem_1_data
-    return (problem_1_data,)
+    return
 
 
 @app.cell
@@ -466,19 +579,24 @@ def _(
     DecisionTreeRegressor,
     ElasticNet,
     ExtraTreesRegressor,
+    GaussianProcessRegressor,
     HuberRegressor,
+    IsotonicRegression,
     KNeighborsRegressor,
     Lasso,
     LinearRegression,
     LinearSVR,
+    PolynomialFeatures,
     RANSACRegressor,
     RandomForestRegressor,
     Ridge,
     SGDRegressor,
     SVR,
+    StrMethodFormatter,
     YEAR_RANGE,
     YEAR_RANGE_STR,
     cleaned_data,
+    make_pipeline,
     mean_squared_error,
     np,
     pd,
@@ -504,14 +622,17 @@ def _(
             & (cleaned_data["Series code"] == target_series)
         ]
 
+        # The number of plots in a column
+        number_of_plot_columns = 5
+
         # The training data for the series
         y_train = data[YEAR_RANGE_STR].values.flatten()
 
         # Regression models
         regression_models = {
-            "Linear Regression": LinearRegression(),
-            "Ridge Regression": Ridge(),
-            "Lasso Regression": Lasso(),
+            "Linear Regressor": LinearRegression(),
+            "Ridge Regressor": Ridge(),
+            "Lasso Regressor": Lasso(),
             "Bayesian Ridge": BayesianRidge(),
             "Elastic Net": ElasticNet(),
             "Huber Regressor": HuberRegressor(),
@@ -527,7 +648,9 @@ def _(
             "SVR (Poly Kernel)": SVR(kernel="poly"),
             "SVR (Sigmoid Kernel)": SVR(kernel="sigmoid"),
             "Linear SVR": LinearSVR(),
-            "SGD Regression": SGDRegressor(),
+            "Stochastic Gradient Descent Regressor": SGDRegressor(),
+            "Gaussian Process Regressor": GaussianProcessRegressor(),
+            "Isotonic Regressor": IsotonicRegression(),
             #
             # Decision Tree Regressors
             "Decision Tree Regressor (max depth 1)": DecisionTreeRegressor(
@@ -574,14 +697,50 @@ def _(
             "KNN Regressor (10 neighbours)": KNeighborsRegressor(
                 n_neighbors=10
             ),
+            #
+            # Linear regressor with polynomial features
+            "Polynomial Regressor (degree 1)": make_pipeline(
+                PolynomialFeatures(1), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 2)": make_pipeline(
+                PolynomialFeatures(2), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 3)": make_pipeline(
+                PolynomialFeatures(3), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 4)": make_pipeline(
+                PolynomialFeatures(4), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 5)": make_pipeline(
+                PolynomialFeatures(5), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 6)": make_pipeline(
+                PolynomialFeatures(6), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 7)": make_pipeline(
+                PolynomialFeatures(7), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 8)": make_pipeline(
+                PolynomialFeatures(8), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 9)": make_pipeline(
+                PolynomialFeatures(9), LinearRegression()
+            ),
+            "Polynomial Regressor (degree 10)": make_pipeline(
+                PolynomialFeatures(10), LinearRegression()
+            ),
         }
 
-        # Get the number of plots on each side
-        number_of_plots = int(np.ceil(np.sqrt(len(regression_models))))
+        # Get the number of plot rows
+        number_of_plot_rows = int(
+            np.ceil(len(regression_models) / number_of_plot_columns)
+        )
 
         # Create the figure and the subplots
         figure, axes = plt.subplots(
-            number_of_plots, number_of_plots, figsize=(32, 32)
+            number_of_plot_rows,
+            number_of_plot_columns,
+            figsize=[number_of_plot_rows * number_of_plot_columns] * 2,
         )
 
         # Initialise the results
@@ -624,6 +783,9 @@ def _(
             # Set the title to the model
             axis.set_title(name)
 
+            # Use integers for the x axis
+            axis.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+
         # Put the data into a data frame
         results_dataframe = (
             pd.DataFrame(results)
@@ -635,135 +797,153 @@ def _(
         return results_dataframe, figure
 
     # Run the exploratory analysis
-    exploratory_analysis()
-    return (exploratory_analysis,)
-
-
-@app.cell
-def _(mo):
-    mo.md(r"### Are we getting greener or more sustainable?")
-    return
-
-
-@app.cell
-def _(problem_1_data):
-    problem_1_data
-    return
-
-
-@app.cell
-def _(model, plt, timeline, world_data):
-    def _():
-        count = 0
-        f, axes = plt.subplots(1, 8, figsize=(18, 30))
-        for i in world_data:
-            data1 = world_data[i]
-            # train linreg
-            model.fit(timeline, data1)
-            regline_x = timeline
-            regline_y = model.predict(regline_x)
-
-            # visualise the data regression
-            axes[count].scatter(timeline, data1)
-            axes[count].plot(regline_x, regline_y, "r-", linewidth=3)
-            count += 1
-        return plt.show()
-
-    _()
-    return
-
-
-@app.cell
-def _(model, np, timeline_train, world_data_c02_train):
-    # Checking goodness of fit
-    # Explained Variance (R^2)
-    print(
-        "Explained Variance (R^2) \t:",
-        model.score(timeline_train, world_data_c02_train),
+    exploratory_analysis_table, exploratory_analysis_figure = (
+        exploratory_analysis()
     )
-
-    # Mean Squared Error (MSE)
-    def mean_sq_err(actual, predicted):
-        """Returns the Mean Squared Error of actual and predicted values"""
-        return np.mean(np.square(np.array(actual) - np.array(predicted)))
-
-    mse = mean_sq_err(world_data_c02_train, model.predict(world_data_c02_train))
-    print("Mean Squared Error (MSE) \t:", mse)
-    print("Root Mean Squared Error (RMSE) \t:", np.sqrt(mse))
-    return mean_sq_err, mse
-
-
-@app.cell
-def _(model, plt, problem_1_data, timeline):
-    def _():
-        for j in problem_1_data:
-            f, axes = plt.subplots(1, 8, figsize=(36, 8))
-            jdata = problem_1_data[j]
-            counti = 0
-            print("Country: ", j)
-            for i in jdata:
-                datai = jdata[i]
-                print(datai.describe())
-                # train linreg
-                model.fit(timeline, datai)
-                regline_x = timeline
-                regline_y = model.predict(regline_x)
-
-                # visualise the data regression
-                axes[counti].scatter(timeline, datai)
-                axes[counti].plot(regline_x, regline_y, "r-", linewidth=3)
-                axes[counti].set_xlabel("Timeline")
-                axes[counti].set_ylabel(i)
-                counti += 1
-        return plt.show()
-
-    _()
-    return
-
-
-@app.cell
-def _(DecisionTreeRegressor, LinearSVR, Ridge, np, pd, plt, problem_2_data):
-    svr_model = LinearSVR()
-    linear_model = Ridge()
-    decision_tree_model = DecisionTreeRegressor(max_depth=2)
-    years = np.array(list(range(1990, 2006)))
-    years_str = [str(year) for year in years]
-    years = years.reshape(-1, 1)
-    co2_data = pd.DataFrame(problem_2_data["Singapore"]["GDP ($)"])
-    train_data = np.array(co2_data.loc[years_str]).ravel()
-
-    svr_model.fit(years, train_data)
-    linear_model.fit(years, train_data)
-    decision_tree_model.fit(years, train_data)
-
-    new_years = np.array(list(range(1990, 2011))).reshape(-1, 1)
-    prediction = linear_model.predict(new_years)
-    plt.figure(figsize=(16, 8))
-    plt.plot(years, train_data)
-    plt.plot(new_years, prediction, "r-", linewidth=3)
     return (
-        co2_data,
-        decision_tree_model,
-        linear_model,
-        new_years,
-        prediction,
-        svr_model,
-        train_data,
-        years,
-        years_str,
+        exploratory_analysis,
+        exploratory_analysis_figure,
+        exploratory_analysis_table,
     )
 
 
 @app.cell
-def _(mo):
-    mo.md(r"### Which should i move to in the future?")
+def _(TABLE_PAGE_SIZE, exploratory_analysis_table, html, md, mo):
+    # Create the slide for the table
+    html(
+        md("## Exploratory Analysis: Tabulated Results")
+        .center()
+        .style(padding_top="10px", padding_bottom="20px"),
+        mo.ui.table(
+            exploratory_analysis_table,
+            selection=None,
+            page_size=TABLE_PAGE_SIZE,
+        ),
+    )
+    return
+
+
+@app.cell
+def _(exploratory_analysis_figure, html, md, mo):
+    # Create the slide for the plot of all the models
+    mo.output.append(
+        html(
+            md("## Exploratory Analysis: Plots of Regression Models")
+            .center()
+            .style(padding="10px 0px"),
+        )
+    )
+    mo.output.append(exploratory_analysis_figure)
+    return
+
+
+@app.cell
+def _(html, md):
+    md(
+        "# Question 1:",
+        html("<h1>Are we getting greener or more sustainable?</h1>"),
+    )
+    return
+
+
+@app.cell
+def _(
+    REGIONS_FOR_PROBLEM_1,
+    SERIES_CODES_PROBLEM_1,
+    format_data_for_problem,
+    imputed_data,
+):
+    # Create the data for problem 1
+    problem_1_data = format_data_for_problem(
+        imputed_data, REGIONS_FOR_PROBLEM_1, SERIES_CODES_PROBLEM_1
+    )
+
+    problem_1_data
+    return (problem_1_data,)
+
+
+@app.cell
+def _(
+    LinearRegression,
+    StrMethodFormatter,
+    YEAR_RANGE,
+    np,
+    plt,
+    problem_1_data,
+):
+    def solve_question_1():
+        "Function to solve question 1."
+
+        # Initialise the list of figures and axes
+        all_figures = []
+
+        # Get the list of years for training
+        years = YEAR_RANGE.reshape(-1, 1)
+
+        # Initialise the model to show the trend
+        model = LinearRegression()
+
+        # Create the sub plots
+        figure, axes = plt.subplots(
+            len(problem_1_data),
+            np.max([len(data.columns) for data in problem_1_data.values()]),
+            figsize=(64, 64),
+        )
+
+        # Iterate over all the countries
+        for country_index, (country, data) in enumerate(problem_1_data.items()):
+            #
+
+            # Iterate over all of the columns in the data
+            for column_index, column in enumerate(data):
+                #
+
+                # Get the column data
+                column_data = data[column]
+
+                # Fit the models on the data
+                model.fit(years, column_data)
+
+                # Predict the values for the data
+                prediction = model.predict(years)
+
+                # Get the axis
+                axis = axes[country_index, column_index]
+
+                # Plot the data and the prediction
+                axis.scatter(years, column_data)
+                axis.plot(years, column_data)
+                axis.plot(years, prediction)
+                axis.set_title(country)
+                axis.set_xlabel("Year")
+                axis.set_ylabel(column)
+
+                # Set the x axis format to integers
+                axis.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+
+                # Add the figure to the lists
+                all_figures.append(figure)
+
+        # Return the figure
+        return figure
+
+    solve_question_1()
+    return (solve_question_1,)
+
+
+@app.cell
+def _(html, md):
+    md(
+        "# Question 2:",
+        html("<h1>Which country should I move to in the future?</h1>"),
+    )
     return
 
 
 @app.cell
 def _(
     REGIONS_TO_REMOVE_FOR_PROBLEM_2,
-    SERIES_CODES_PROBLEM_2,
+    SERIES_CODES,
     format_data_for_problem,
     imputed_data,
 ):
@@ -772,7 +952,7 @@ def _(
         imputed_data[
             ~imputed_data["Country name"].isin(REGIONS_TO_REMOVE_FOR_PROBLEM_2)
         ]["Country name"].unique(),
-        SERIES_CODES_PROBLEM_2,
+        SERIES_CODES,
     )
 
     problem_2_data
@@ -780,44 +960,144 @@ def _(
 
 
 @app.cell
-def _(LinearRegression, np, pd, problem_2_data, timeline):
-    # Extracting exact sets of data from problem_2_data for analysis
-    predictions_df = pd.DataFrame()
-    row = 0
-    column = 0
-    for country in problem_2_data:
-        # Extract the data for the country
-        Country_data = pd.DataFrame(problem_2_data[str(country)])
-        row += 1
-        country_predictions = {}  # Temporary dictionary to store predictions for this country
-        for series in Country_data:
-            Series_data = pd.DataFrame(Country_data[str(series)])
-            linreg = LinearRegression()
-            linreg.fit(timeline, Series_data)
-            predicted_value_2025 = linreg.predict(np.array([[2025]]))
-            country_predictions[series] = predicted_value_2025[0][
-                0
-            ]  # Store the prediction
-            column += 1
-        predictions_df = predictions_df._append(
-            pd.Series(country_predictions, name=country)
+def _(
+    LinearRegression,
+    PolynomialFeatures,
+    YEAR_RANGE,
+    make_pipeline,
+    np,
+    pd,
+    problem_2_data,
+):
+    def get_predictions_for_question_2():
+        "Function to get the predictions for 2025 for question 2."
+
+        # Create the dictionary of predictions
+        predictions = {}
+
+        # Initialise the model to do the predictions
+        model = make_pipeline(PolynomialFeatures(3), LinearRegression())
+
+        # Fix the year range for training
+        years = YEAR_RANGE.reshape(-1, 1)
+
+        # Iterate over the countries in the problem 2 data set
+        for country, country_data in problem_2_data.items():
+            #
+
+            # Create the dictionary to store the predictions
+            # for each of the series for the country
+            country_predictions = {}
+
+            # Iterate over the series in the country data
+            for series, series_data in country_data.items():
+                #
+
+                # Fit the model
+                model.fit(years, series_data)
+
+                # Get the predicted value for 2025
+                predicted_value = model.predict(np.array(2025).reshape(-1, 1))
+
+                # Store the prediction
+                country_predictions[series] = predicted_value[0]
+
+            # Append the country predictions to the list
+            predictions[country] = country_predictions
+
+        # Convert the predictions to a dataframe
+        predictions_dataframe = pd.DataFrame(predictions)
+
+        # Normalise the predictions
+        normalised_predictions = (
+            predictions_dataframe - predictions_dataframe.mean()
+        ) / predictions_dataframe.std()
+
+        # Transpose the predictions
+        transposed_predictions = normalised_predictions.transpose()
+
+        # Fill all the NaNs with zeros
+        transposed_predictions.fillna(0, inplace=True)
+
+        return transposed_predictions
+
+    normalised_predictions_question_2 = get_predictions_for_question_2()
+    normalised_predictions_question_2
+    return get_predictions_for_question_2, normalised_predictions_question_2
+
+
+@app.cell
+def _(
+    SERIES_CODE_TO_MULTIPLIER_MAP,
+    SERIES_NAME_TO_CODE_MAP,
+    itemgetter,
+    normalised_predictions_question_2,
+    pd,
+):
+    def get_quality_of_life_score_for_question_2():
+        "Function to get the quality of life score for question 2."
+
+        # Initialise the dictionary with the quality of life scores
+        # for each country
+        quality_of_life_scores = {}
+
+        # Get the list of series codes that are wanted
+        wanted_series_codes = list(SERIES_CODE_TO_MULTIPLIER_MAP.keys())
+
+        # Make a copy of the normalised predictions
+        normalised_predictions = normalised_predictions_question_2.copy()
+
+        # Convert all the series names to a series code
+        normalised_predictions.columns = [
+            SERIES_NAME_TO_CODE_MAP[series_name]
+            for series_name in normalised_predictions.columns
+        ]
+
+        # Get only the wanted series
+        wanted_predictions = normalised_predictions[wanted_series_codes]
+
+        # Iterate over each country
+        for country, country_data in wanted_predictions.iterrows():
+            #
+
+            # Initialise the quality of life score
+            qol_score = 0
+
+            # Iterate over all the columns in the country data
+            for index, value in enumerate(country_data):
+                #
+
+                # Get the series code for the column
+                series_code = wanted_predictions.columns[index]
+
+                # Get the multiplier for the series code
+                multiplier = SERIES_CODE_TO_MULTIPLIER_MAP[series_code]
+
+                # Multiply the value by the multiplier
+                # and add the result to the score
+                qol_score += value * multiplier
+
+            # Add the quality of life score for the country to the dictionary
+            quality_of_life_scores[country] = qol_score
+
+        # Sort the dictionary to have the countries
+        # with the highest scores appear first
+        sorted_quality_of_life_scores = dict(
+            sorted(
+                quality_of_life_scores.items(), key=itemgetter(1), reverse=True
+            )
         )
 
-    # Print the final DataFrame
-    predictions_df
+        # Get the data frame for the quality of life scores
+        quality_of_life_scores_data_frame = pd.DataFrame(
+            sorted_quality_of_life_scores, index=["Quality of life score"]
+        ).transpose()
 
-    return (
-        Country_data,
-        Series_data,
-        column,
-        country,
-        country_predictions,
-        linreg,
-        predicted_value_2025,
-        predictions_df,
-        row,
-        series,
-    )
+        # Return the quality of life score data frame
+        return quality_of_life_scores_data_frame
+
+    get_quality_of_life_score_for_question_2()
+    return (get_quality_of_life_score_for_question_2,)
 
 
 if __name__ == "__main__":

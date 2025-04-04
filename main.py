@@ -835,6 +835,12 @@ def _(mo):
 
 
 @app.cell
+def _(mo):
+    mo.md(r"#### abstracting problem 2 data from main data set")
+    return
+
+
+@app.cell
 def _(
     REGIONS_TO_REMOVE_FOR_PROBLEM_2,
     SERIES_CODES_PROBLEM_2,
@@ -854,6 +860,12 @@ def _(
 
 
 @app.cell
+def _(mo):
+    mo.md(r"#### processing abstracted data into useful data")
+    return
+
+
+@app.cell
 def _(LinearRegression, np, pd, problem_2_data, timeline):
     # Extracting exact sets of data from problem_2_data for analysis
     predictions_df = pd.DataFrame()
@@ -865,18 +877,19 @@ def _(LinearRegression, np, pd, problem_2_data, timeline):
         row += 1
         country_predictions = {}  # Temporary dictionary to store predictions for this country
         for series in Country_data:
+            # Extract Series data per country
             Series_data= pd.DataFrame(Country_data[str(series)])  
             linreg=LinearRegression()
             linreg.fit(timeline, Series_data)
             predicted_value_2025 = linreg.predict(np.array([[2025]]))
             country_predictions[series] = predicted_value_2025[0][0]  # Store the prediction
             column += 1
+        # Generate a dataframe containing predicted data for 2025
         predictions_df = predictions_df._append(pd.Series(country_predictions, name=country))
-        
-    # Print the final DataFrame
-    predictions_df
 
-
+    # normalize the values
+    normalized_df = ((predictions_df-predictions_df.mean())/predictions_df.std())
+    normalized_df
     return (
         Country_data,
         Series_data,
@@ -884,6 +897,7 @@ def _(LinearRegression, np, pd, problem_2_data, timeline):
         country,
         country_predictions,
         linreg,
+        normalized_df,
         predicted_value_2025,
         predictions_df,
         row,
@@ -892,7 +906,76 @@ def _(LinearRegression, np, pd, problem_2_data, timeline):
 
 
 @app.cell
-def _():
+def _(mo):
+    mo.md(r"#### Obtaining a QOLscore using useful Q2 data")
+    return
+
+
+@app.cell
+def _(normalized_df, pd):
+    # Create a dataframe with Quality of Life (QOL) scores for every country
+    QOLscore_data = pd.DataFrame()
+
+    # Transpose the normalized DataFrame
+    normalized_df_transpose = normalized_df.transpose()
+    normalized_df_transpose.fillna(0, inplace=True)  # Replace NaN with 0
+
+    # Iterate over each country (column in the transposed DataFrame)
+    for countryqol in normalized_df_transpose.columns:
+        # Calculate the QOL score using the specified formula
+        QOL = (
+            normalized_df_transpose.iloc[0, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[1, normalized_df_transpose.columns.get_loc(countryqol)]
+            - normalized_df_transpose.iloc[2, normalized_df_transpose.columns.get_loc(countryqol)]
+            - normalized_df_transpose.iloc[3, normalized_df_transpose.columns.get_loc(countryqol)]
+            - normalized_df_transpose.iloc[4, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[5, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[6, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[7, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[8, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[9, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[10, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[11, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[15, normalized_df_transpose.columns.get_loc(countryqol)]
+            - normalized_df_transpose.iloc[17, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[20, normalized_df_transpose.columns.get_loc(countryqol)]
+            + normalized_df_transpose.iloc[21, normalized_df_transpose.columns.get_loc(countryqol)]
+            - normalized_df_transpose.iloc[22, normalized_df_transpose.columns.get_loc(countryqol)]
+            - normalized_df_transpose.iloc[23, normalized_df_transpose.columns.get_loc(countryqol)]
+            - normalized_df_transpose.iloc[24, normalized_df_transpose.columns.get_loc(countryqol)]
+        )
+        # Append the QOL score to the DataFrame
+        QOLscore_data.loc[countryqol, "QOL Score"] = QOL
+
+    # Print the QOL scores
+    QOLscore_data.head(20)
+    return QOL, QOLscore_data, countryqol, normalized_df_transpose
+
+
+@app.cell
+def _(mo):
+    mo.md(r"#### Visualising the data in a bar graph")
+    return
+
+
+@app.cell
+def _(QOLscore_data, plt):
+    # Reset the index of QOLscore_data to use country names as a column
+    QOLscore_data.rename(columns={"index": "Country"}, inplace=True)
+
+    # Create a bar plot
+    plt.figure(figsize=(200, 50))  # Set the figure size
+    plt.bar(QOLscore_data["Country"], QOLscore_data["QOL Score"], color="skyblue")
+
+    # Customize the plot
+    plt.title("Quality of Life (QOL) Scores by Country", fontsize=16)
+    plt.xlabel("Country", fontsize=12)
+    plt.ylabel("QOL Score", fontsize=12)
+    plt.xticks(rotation=45, ha="right")  # Rotate x-axis labels for better readability
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
     return
 
 

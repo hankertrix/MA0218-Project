@@ -1203,7 +1203,7 @@ def _(html, md, md_numbered_list):
             html(
                 "In general, we are not becoming greener or more sustainable.",
                 "Globally, carbon dioxide emissions are increasing",
-                "across the board, save for Europe and Central Asia.",
+                "across the board, except for Europe and Central Asia.",
             ),
             html(
                 "Methane emissions have also been increasing across the board,",

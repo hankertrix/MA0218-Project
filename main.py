@@ -41,11 +41,9 @@ def _():
         HuberRegressor,
         Lasso,
         LinearRegression,
-        PassiveAggressiveRegressor,
         RANSACRegressor,
         Ridge,
         SGDRegressor,
-        TheilSenRegressor,
     )
     from sklearn.metrics import mean_squared_error, r2_score
     from sklearn.neighbors import KNeighborsRegressor
@@ -69,7 +67,6 @@ def _():
         Lasso,
         LinearRegression,
         LinearSVR,
-        PassiveAggressiveRegressor,
         PolynomialFeatures,
         RANSACRegressor,
         RandomForestRegressor,
@@ -77,7 +74,6 @@ def _():
         SGDRegressor,
         SVR,
         StrMethodFormatter,
-        TheilSenRegressor,
         enable_iterative_imputer,
         functools,
         itemgetter,

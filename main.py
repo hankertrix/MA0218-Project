@@ -13,13 +13,14 @@
 
 import marimo
 
-__generated_with = "0.12.0"
-app = marimo.App(width="medium", layout_file="layouts/main.slides.json")
+__generated_with = "0.12.4"
+app = marimo.App(width="full", layout_file="layouts/main.slides.json")
 
 
 @app.cell
 def _():
     # Import all the required libraries
+    import functools
     import re
     from operator import itemgetter
 
@@ -78,6 +79,7 @@ def _():
         StrMethodFormatter,
         TheilSenRegressor,
         enable_iterative_imputer,
+        functools,
         itemgetter,
         make_pipeline,
         mean_squared_error,
@@ -92,40 +94,13 @@ def _():
 
 
 @app.cell
-def _(mo):
-    # Create a function to more easily create HTML
-    def html(*args):
-        return mo.Html(
-            "\n".join(
-                [arg if isinstance(arg, str) else arg.text for arg in args]
-            )
-        )
-
-    # Create a function to more easily create markdown
-    def md(*args):
-        return mo.md(
-            "\n".join(
-                [arg if isinstance(arg, str) else arg.text for arg in args]
-            )
-        )
-
-    html(
-        md("# MA0218 Mini Project:").center(),
-        html("<h1>The Climate Forum</h1>").center().style(color="#3CB034"),
-        md("By: Nicholas, Haziq, Dylan and Jun Feng")
-        .center()
-        .style(padding="5em"),
-    )
-    return html, md
-
-
-@app.cell
 def _(np):
     # The constants used in the program
     DATA_FILE = "./data.xls"
 
-    # The table page size to use
-    TABLE_PAGE_SIZE = 20
+    # The minimum and maximum values for the multiplier
+    MULTIPLIER_MAX_VALUE = 100
+    MULTIPLIER_MIN_VALUE = -100
 
     # The list of columns to drop
     COLUMNS_TO_DROP = [
@@ -184,8 +159,6 @@ def _(np):
         "IS.ROD.PAVE.ZS": 1,
         # Physicians (per 1,000 people)
         "SH.MED.PHYS.ZS": 1,
-        # Ratio of girls to boys in primary & secondary school (%)
-        "SE.ENR.PRSC.FM.ZS": 1,
         # Under-five mortality rate (per 1,000)
         "SH.DYN.MORT": -1,
         # Energy use per capita (kilograms of oil equivalent)
@@ -268,15 +241,15 @@ def _(np):
 
     # The list of regions for problem 1
     REGIONS_FOR_PROBLEM_1 = [
-        "East Asia & Pacific",
+        "World",
         "Europe & Central Asia",
-        "Euro area",
         "Latin America & Caribbean",
+        "East Asia & Pacific",
         "Middle East & North Africa",
         "South Asia",
         "Sub-Saharan Africa",
+        "Euro area",
         "Small island developing states",
-        "World",
     ]
 
     # The list of regions to remove for problem 2
@@ -302,19 +275,206 @@ def _(np):
     #
     # There is no data for 2011, so we are skipping it
     YEAR_RANGE = np.array(list(range(1990, 2010 + 1)))
+
+    # The year range as a string for easier indexing into the data frame
     YEAR_RANGE_STR = [str(year) for year in YEAR_RANGE]
     return (
         COLUMNS_TO_DROP,
         DATA_FILE,
+        MULTIPLIER_MAX_VALUE,
+        MULTIPLIER_MIN_VALUE,
         REGIONS_FOR_PROBLEM_1,
         REGIONS_TO_REMOVE_FOR_PROBLEM_2,
         SERIES_CODES,
         SERIES_CODES_PROBLEM_1,
         SERIES_CODE_TO_MULTIPLIER_MAP,
-        TABLE_PAGE_SIZE,
         YEAR_RANGE,
         YEAR_RANGE_STR,
     )
+
+
+@app.cell
+def _():
+    # Constants used for the UI
+
+    # The table page size to use
+    TABLE_PAGE_SIZE = 20
+
+    # The hex code for the green colour
+    GREEN_COLOUR = "#3CB034"
+    return GREEN_COLOUR, TABLE_PAGE_SIZE
+
+
+@app.cell
+def _(TABLE_PAGE_SIZE, functools, mo):
+    def html(*args):
+        "Function to more easily write HTML."
+        return mo.Html(
+            "\n".join(
+                [arg if isinstance(arg, str) else arg.text for arg in args]
+            )
+        )
+
+    def md(*args):
+        "Function to more easily write markdown."
+        return mo.md(
+            "\n".join(
+                [arg if isinstance(arg, str) else arg.text for arg in args]
+            )
+        )
+
+    # The function to create a Marimo table UI
+    # with the default arguments passed so we
+    # don't have to keep writing the same things
+    # over and over again
+    ui_table = functools.partial(
+        mo.ui.table, selection=None, page_size=TABLE_PAGE_SIZE
+    )
+
+    def html_heading(heading_level: int, heading: str):
+        "Function to more easily create a HTML heading."
+        return html(f"<h{heading_level}>", heading, f"</h{heading_level}>")
+
+    def md_heading(heading_level: int, heading: str):
+        "Function to more easily create a markdown heading."
+        return md(f"{'#' * heading_level} {heading}")
+
+    def html_hyperlink(string: str, link: str):
+        "Function to more easily create a HTML hyperlink."
+        return html(f"<a href={link}>{string}</a>")
+
+    def md_hyperlink(string: str, link: str):
+        "Function to more easily create a markdown hyperlink."
+        return md(f"[{string}]({link})")
+
+    def style_inline(string: str, **styles: str):
+        """
+        Function to style a string with inline styles.
+
+        The first argument is the string to style with an
+        inline span element, and the keyword arguments
+        are the CSS styles
+        """
+
+        # Create the style string for the element
+        style_string = ", ".join(
+            [
+                f"{key.replace('_', '-')}: {value}"
+                for key, value in styles.items()
+            ]
+        )
+        return html(f"<span style='{style_string}'>{string}</span>")
+
+    def html_list(list_type: str, *elements):
+        """
+        Function to create HTML lists more easily.
+
+        The list type can either by an ordered list (ol),
+        or an unordered list (ul).
+        """
+        return html(
+            f"<{list_type}>",
+            *[f"<li>{element}</li>" for element in elements],
+            f"</{list_type}>",
+        )
+
+    def html_ordered_list(*elements):
+        "Function to create a HTML ordered list more easily."
+        return html_list("ol", *elements)
+
+    def html_numbered_list(*elements):
+        """
+        Function to create a numbered HTML list more easily.
+
+        This function is an alias for the html_ordered_list function.
+        """
+        return html_ordered_list(*elements)
+
+    def html_unordered_list(*elements):
+        "Function to create a HTML unordered list more easily."
+        return html_list("ul", *elements)
+
+    def html_unnumbered_list(*elements):
+        """
+        Function to create a HTML list without numbering more easily.
+
+        This function is an alias for the html_unordered_list function.
+        """
+        return html_ordered_list(*elements)
+
+    def html_element(element_type: str, *elements):
+        "Function to more easily create HTML elements."
+        return html(f"<{element_type}>", *elements, f"</{element_type}>")
+
+    def md_ordered_list(*elements):
+        "Function to create a markdown ordered list more easily."
+        return md(
+            *[
+                f"{index}. {element}"
+                for index, element in enumerate(elements, start=1)
+            ]
+        )
+
+    def md_numbered_list(*elements):
+        """
+        Function to create a numbered markdown list more easily.
+
+        This function is an alias for the md_ordered_list function.
+        """
+        return md_ordered_list(*elements)
+
+    def md_unordered_list(*elements):
+        "Function to create a markdown unordered list more easily."
+        return md(*[f"- {element}" for element in elements])
+
+    def md_unnumbered_list(*elements):
+        """
+        Function to create a markdown list without numbering more easily.
+
+        This function is an alias for the md_unordered_list function.
+        """
+        return md_unordered_list(*elements)
+
+    def centred_slide_title(title: str):
+        "Function to return a centred slide title."
+        return md(f"## {title}").center().style(padding_bottom="20px")
+
+    return (
+        centred_slide_title,
+        html,
+        html_element,
+        html_heading,
+        html_hyperlink,
+        html_list,
+        html_numbered_list,
+        html_ordered_list,
+        html_unnumbered_list,
+        html_unordered_list,
+        md,
+        md_heading,
+        md_hyperlink,
+        md_numbered_list,
+        md_ordered_list,
+        md_unnumbered_list,
+        md_unordered_list,
+        style_inline,
+        ui_table,
+    )
+
+
+@app.cell
+def _(GREEN_COLOUR, html, style_inline):
+    # Constants used in the slides
+
+    # The question for problem 1
+    PROBLEM_1_QUESTION = html(
+        f"Are we getting {style_inline('greener', color=GREEN_COLOUR)}",
+        f"or {style_inline('more sustainable', color=GREEN_COLOUR)}?",
+    )
+
+    # The question for problem 2
+    PROBLEM_2_QUESTION = html("Which country should I move to in the future?")
+    return PROBLEM_1_QUESTION, PROBLEM_2_QUESTION
 
 
 @app.cell
@@ -324,17 +484,11 @@ def _(DATA_FILE, pd):
 
     # Get the data from the excel sheet
     data = climate_change_excel_sheet["Data"]
-    country_descriptions = climate_change_excel_sheet["Country"]
     series_descriptions = climate_change_excel_sheet["Series"]
 
     # Convert all the column names to string
     data.columns = data.columns.astype(str)
-    return (
-        climate_change_excel_sheet,
-        country_descriptions,
-        data,
-        series_descriptions,
-    )
+    return climate_change_excel_sheet, data, series_descriptions
 
 
 @app.cell
@@ -358,8 +512,21 @@ def _(series_descriptions):
 
 
 @app.cell
-def _(TABLE_PAGE_SIZE, data, html, md, mo):
-    # Display the slide contents
+def _(GREEN_COLOUR, html, html_heading, md):
+    # Create the title slide
+    html(
+        md("# MA0218 Mini Project:").center(),
+        html_heading(1, "The Climate Forum").center().style(color=GREEN_COLOUR),
+        md("By: Nicholas, Haziq, Dylan and Jun Feng")
+        .center()
+        .style(padding="5em"),
+    )
+    return
+
+
+@app.cell
+def _(data, html, md, ui_table):
+    # The slide for the data set used
     html(
         md("## Data set"),
         html(
@@ -368,7 +535,40 @@ def _(TABLE_PAGE_SIZE, data, html, md, mo):
             "Have a look at the data set in the table below:",
             "</p>",
         ).style(padding="10px 0px"),
-        mo.ui.table(data, selection=None, page_size=TABLE_PAGE_SIZE),
+        ui_table(data),
+    )
+    return
+
+
+@app.cell
+def _(
+    GREEN_COLOUR,
+    PROBLEM_1_QUESTION,
+    PROBLEM_2_QUESTION,
+    html,
+    html_numbered_list,
+    md,
+    style_inline,
+):
+    # The slide for the objectives
+    md(
+        "## Objectives",
+        "",
+        "The two main objectives of this mini project are:",
+        "",
+        html_numbered_list(
+            html(
+                "Find out if we are getting",
+                style_inline("greener", color=GREEN_COLOUR),
+                "over the years.",
+            ),
+            "Deterine the best country to move to in the future.",
+        ),
+        "These objectives are formulated as 2 problem statements:",
+        html_numbered_list(
+            PROBLEM_1_QUESTION,
+            PROBLEM_2_QUESTION,
+        ),
     )
     return
 
@@ -491,8 +691,6 @@ def _(
 def _(clean_data, data):
     # Clean the data
     cleaned_data = clean_data(data)
-
-    cleaned_data
     return (cleaned_data,)
 
 
@@ -500,8 +698,6 @@ def _(clean_data, data):
 def _(cleaned_data, impute_missing_data):
     # Impute the missing data
     imputed_data = impute_missing_data(cleaned_data)
-
-    imputed_data
     return (imputed_data,)
 
 
@@ -547,27 +743,42 @@ def _(pd):
 
 @app.cell
 def _(md):
-    md("# Exploratory Analysis")
+    md("# Exploratory Analysis").center()
     return
 
 
 @app.cell
-def _(md):
+def _(html, md, md_numbered_list):
     md(
-        md("## Exploratory Analysis: Procedure").style(padding="10px 0px"),
-        md(
-            "Below are the steps we followed to explore the data:",
-            "",
-            "1. Run through the data in Excel and note that the data",
-            "is time series with data of at most 20 years.",
-            "",
-            "2. With such a small number of data points,",
-            "a list of regression models was collated from Scikit-Learn",
-            "to assess the ability of machine learning models to fit",
-            "the data properly.",
-            "",
-            "3. Write code to evaluate model performance",
-            "on one series and compare the results.",
+        "## Exploratory Analysis: Procedure",
+        "Below are the steps we followed to explore the data:",
+        md_numbered_list(
+            html(
+                "Run through the data in Microsoft Excel,",
+                "and note that the data",
+                "is time series with data of at most 20 years.",
+            ),
+            html(
+                "The data was found to have numerous missing values",
+                "across most series, and since the data is time series,",
+                "data that is too sparse is unsuitable",
+                "for most machine learning models to train on.",
+            ),
+            html(
+                "Most of the sparse data is discarded,",
+                "as they are unusable.",
+            ),
+            html(
+                "Additionally, with such a small number of data points,",
+                "a list of regression models was collated from",
+                "Scikit-Learn to assess the ability of",
+                "machine learning models to fit",
+                "the data properly.",
+            ),
+            html(
+                "Hence, code was written to evaluate model performance",
+                "on one series and the results were compared.",
+            ),
         ),
     )
     return
@@ -796,7 +1007,7 @@ def _(
         # Return the results dataframe
         return results_dataframe, figure
 
-    # Run the exploratory analysis
+    # Run the exploratory analysis and save the table and figure
     exploratory_analysis_table, exploratory_analysis_figure = (
         exploratory_analysis()
     )
@@ -808,40 +1019,33 @@ def _(
 
 
 @app.cell
-def _(TABLE_PAGE_SIZE, exploratory_analysis_table, html, md, mo):
+def _(centred_slide_title, exploratory_analysis_table, html, ui_table):
     # Create the slide for the table
     html(
-        md("## Exploratory Analysis: Tabulated Results")
-        .center()
-        .style(padding_top="10px", padding_bottom="20px"),
-        mo.ui.table(
-            exploratory_analysis_table,
-            selection=None,
-            page_size=TABLE_PAGE_SIZE,
-        ),
+        centred_slide_title("Exploratory Analysis: Tabulated Results"),
+        ui_table(exploratory_analysis_table),
     )
     return
 
 
 @app.cell
-def _(exploratory_analysis_figure, html, md, mo):
+def _(centred_slide_title, exploratory_analysis_figure, mo):
     # Create the slide for the plot of all the models
     mo.output.append(
-        html(
-            md("## Exploratory Analysis: Plots of Regression Models")
-            .center()
-            .style(padding="10px 0px"),
-        )
+        centred_slide_title("Exploratory Analysis: Plots of Regression Models")
     )
     mo.output.append(exploratory_analysis_figure)
     return
 
 
 @app.cell
-def _(html, md):
-    md(
-        "# Question 1:",
-        html("<h1>Are we getting greener or more sustainable?</h1>"),
+def _(PROBLEM_1_QUESTION, html, html_heading, md):
+    html(
+        md("# Problem 1:").center(),
+        html_heading(
+            1,
+            PROBLEM_1_QUESTION,
+        ).center(),
     )
     return
 
@@ -857,9 +1061,57 @@ def _(
     problem_1_data = format_data_for_problem(
         imputed_data, REGIONS_FOR_PROBLEM_1, SERIES_CODES_PROBLEM_1
     )
-
-    problem_1_data
     return (problem_1_data,)
+
+
+@app.cell
+def _(html, md, md_numbered_list):
+    # Display the slide for the procedure to prepare the data for problem 1
+    html(
+        md(
+            "## Problem 1: Data preparation and procedure",
+            "",
+            "The given climate change data is a bit of a mess,",
+            "so the data is prepared following the procedure below:",
+            "",
+            md_numbered_list(
+                html(
+                    "Pull out all the data for the series",
+                    "that are relevant to sustainability.",
+                    "An example is carbon dioxide emissions.",
+                ),
+                html(
+                    "Format the data such that the series are the columns",
+                    "and the years are the rows.",
+                ),
+                html(
+                    "Select the data for the regions that we are interested in."
+                ),
+            ),
+            "Once the data has been prepared, a linear regression model",
+            "is fitted on to the data to show the trends",
+            "and the graph is plotted using Matplotlib subplots.",
+        )
+    )
+    return
+
+
+@app.cell
+def _(html, md, md_unnumbered_list, problem_1_data, ui_table):
+    # Display the prepared data
+    html(
+        md("## Problem 1: Prepared data").center(),
+        md_unnumbered_list(
+            *[
+                html(
+                    country_name.title(),
+                    ui_table(country_data, selection=None, page_size=5),
+                )
+                for country_name, country_data in problem_1_data.items()
+            ]
+        ),
+    )
+    return
 
 
 @app.cell
@@ -871,8 +1123,8 @@ def _(
     plt,
     problem_1_data,
 ):
-    def solve_question_1():
-        "Function to solve question 1."
+    def solve_problem_1():
+        "Function to solve problem 1."
 
         # Initialise the list of figures and axes
         all_figures = []
@@ -914,7 +1166,7 @@ def _(
                 axis.scatter(years, column_data)
                 axis.plot(years, column_data)
                 axis.plot(years, prediction)
-                axis.set_title(country)
+                axis.set_title(country.title())
                 axis.set_xlabel("Year")
                 axis.set_ylabel(column)
 
@@ -927,15 +1179,61 @@ def _(
         # Return the figure
         return figure
 
-    solve_question_1()
-    return (solve_question_1,)
+    # Save the graph plots for problem 1
+    problem_1_graph_plots = solve_problem_1()
+    return problem_1_graph_plots, solve_problem_1
 
 
 @app.cell
-def _(html, md):
+def _(centred_slide_title, mo, problem_1_graph_plots):
+    # Create the slide to display the graph plots for problem 1
+    mo.output.append(centred_slide_title("Problem 1: Trend plots"))
+    mo.output.append(problem_1_graph_plots)
+    return
+
+
+@app.cell
+def _(html, md, md_numbered_list):
+    # Create the slide to show the insights for problem 1
     md(
-        "# Question 2:",
-        html("<h1>Which country should I move to in the future?</h1>"),
+        "## Problem 1: Insights",
+        "From the trend plots in the previous slide,",
+        "we have gathered these insights:",
+        md_numbered_list(
+            html(
+                "In general, we are not becoming greener or more sustainable.",
+                "Globally, carbon dioxide emissions are increasing",
+                "across the board, save for Europe and Central Asia.",
+            ),
+            html(
+                "Methane emissions have also been increasing across the board,",
+                "with only the Euro area and the small islands decreasing in",
+                "methane emissions.",
+            ),
+            html(
+                "These trends are expected, as total energy use",
+                "has increased across the board,",
+                "save for Europe and Central Asia",
+                "which decreased their energy use.",
+            ),
+            html(
+                "However, there is some hope, as we are generally",
+                "growing in an increasingly sustainable manner,",
+                "except for the Middle East and North Africa,",
+                "as carbon dioxide emissions and energy use per unit of GDP",
+                "has been falling.",
+            ),
+        ),
+    )
+    return
+
+
+@app.cell
+def _(PROBLEM_2_QUESTION, html, html_heading, md):
+    # Display the title slide for problem 2
+    html(
+        md("# Problem 2:").center(),
+        html_heading(1, PROBLEM_2_QUESTION).center(),
     )
     return
 
@@ -947,6 +1245,7 @@ def _(
     format_data_for_problem,
     imputed_data,
 ):
+    # Create the data for problem 2
     problem_2_data = format_data_for_problem(
         imputed_data,
         imputed_data[
@@ -954,9 +1253,119 @@ def _(
         ]["Country name"].unique(),
         SERIES_CODES,
     )
-
-    problem_2_data
     return (problem_2_data,)
+
+
+@app.cell
+def _(html, md, md_numbered_list):
+    # Create the slide to describe the data preparation
+    # for problem 2
+    md(
+        "## Problem 2: Data preparation",
+        "The data preparation for problem 2 is quite similar",
+        "to that of problem 1, and the steps are:",
+        md_numbered_list(
+            html(
+                "Pull out all the data for the series",
+                "that are significant in our decision to",
+                "live in the country in the future.",
+                "An example is access to improved sanitation.",
+            ),
+            html(
+                "Format the data such that the series are the columns",
+                "and the years are the rows.",
+            ),
+            html(
+                "Select the data for all countries,",
+                "leaving out the regions.",
+            ),
+        ),
+    )
+    return
+
+
+@app.cell
+def _(centred_slide_title, html, md_unnumbered_list, problem_2_data, ui_table):
+    # Show the prepared data
+    html(
+        centred_slide_title("Problem 2: Prepared data"),
+        md_unnumbered_list(
+            *[
+                html(country_name.title(), ui_table(country_data, page_size=5))
+                for (country_name, country_data) in list(
+                    problem_2_data.items()
+                )[:5]
+            ]
+        ),
+    )
+    return
+
+
+@app.cell
+def _(html, md, md_numbered_list, md_unnumbered_list):
+    # Create the slide to show the procedure to
+    # get the quality of life scores
+    md(
+        "## Problem 2: Procedure",
+        "After the data has been prepared,",
+        "the procedure below is followed to obtain a score,",
+        "which we call the quality of life score,",
+        "to rank the countries:",
+        md_numbered_list(
+            html(
+                "For each country, a cubic regressor",
+                "(a polynomial regressor of degree 3)",
+                "was fitted on every single series,",
+                "and the model is used to predict the value",
+                "for 2025.",
+                md_unnumbered_list(
+                    html(
+                        "For example, the model is trained on",
+                        "the series for GDP for Singapore,",
+                        "and the model is used to predict the",
+                        "GDP value for Singapore in 2025.",
+                    )
+                ),
+            ),
+            html(
+                "The predicted values for 2025 for each country",
+                "is then normalised using z-score normalisation",
+                "so that the data for each series for all countries",
+                "has a mean of 0 and a standard deviation of 1.",
+                md_unnumbered_list(
+                    html(
+                        "For example, the series for GDP for all countries",
+                        "is normalised using z-score normalisation,",
+                        "so the GDP values for all countries has",
+                        "a mean value of 0 and a standard deviation of 1",
+                    )
+                ),
+            ),
+            html(
+                "With the z-score normalisation in place,",
+                "the values for every series",
+                "for a country is then multiplied by a multiplier",
+                "and then added together to create",
+                "the quality of life score.",
+                md_unnumbered_list(
+                    html(
+                        "For example, the values for every series",
+                        "for Singapore is multiplied by a multiplier,",
+                        "and then added together",
+                        "to create a quality of life score for Singapore.",
+                    ),
+                    html(
+                        "This multiplier represents the preference",
+                        "for a certain aspect, so this multiplier",
+                        "can be edited to get a country that",
+                        "maximises the preferred aspects",
+                        "while minimising the undesirable aspects.",
+                    ),
+                ),
+            ),
+        ),
+    )
+    return
 
 
 @app.cell
@@ -969,8 +1378,8 @@ def _(
     pd,
     problem_2_data,
 ):
-    def get_predictions_for_question_2():
-        "Function to get the predictions for 2025 for question 2."
+    def get_predictions_for_problem_2():
+        "Function to get the predictions for 2025 for problem 2."
 
         # Create the dictionary of predictions
         predictions = {}
@@ -1019,11 +1428,36 @@ def _(
         # Fill all the NaNs with zeros
         transposed_predictions.fillna(0, inplace=True)
 
-        return transposed_predictions
+        return transposed_predictions, predictions_dataframe.transpose()
 
-    normalised_predictions_question_2 = get_predictions_for_question_2()
-    normalised_predictions_question_2
-    return get_predictions_for_question_2, normalised_predictions_question_2
+    normalised_predictions_problem_2, raw_predictions_problem_2 = (
+        get_predictions_for_problem_2()
+    )
+    return (
+        get_predictions_for_problem_2,
+        normalised_predictions_problem_2,
+        raw_predictions_problem_2,
+    )
+
+
+@app.cell
+def _(centred_slide_title, html, raw_predictions_problem_2, ui_table):
+    # Show the raw predicted values for problem 2
+    html(
+        centred_slide_title("Problem 2: Raw predictions for 2025"),
+        ui_table(raw_predictions_problem_2),
+    )
+    return
+
+
+@app.cell
+def _(centred_slide_title, html, normalised_predictions_problem_2, ui_table):
+    # Show the normalised predicted values for problem 2
+    html(
+        centred_slide_title("Problem 2: Normalised predictions for 2025"),
+        ui_table(normalised_predictions_problem_2),
+    )
+    return
 
 
 @app.cell
@@ -1031,11 +1465,14 @@ def _(
     SERIES_CODE_TO_MULTIPLIER_MAP,
     SERIES_NAME_TO_CODE_MAP,
     itemgetter,
-    normalised_predictions_question_2,
+    mo,
+    normalised_predictions_problem_2,
     pd,
 ):
-    def get_quality_of_life_score_for_question_2():
-        "Function to get the quality of life score for question 2."
+    def get_quality_of_life_score_for_problem_2(
+        series_code_to_multiplier_map: dict[str, mo.ui.slider],
+    ):
+        "Function to get the quality of life score for problem 2."
 
         # Initialise the dictionary with the quality of life scores
         # for each country
@@ -1045,7 +1482,7 @@ def _(
         wanted_series_codes = list(SERIES_CODE_TO_MULTIPLIER_MAP.keys())
 
         # Make a copy of the normalised predictions
-        normalised_predictions = normalised_predictions_question_2.copy()
+        normalised_predictions = normalised_predictions_problem_2.copy()
 
         # Convert all the series names to a series code
         normalised_predictions.columns = [
@@ -1070,8 +1507,18 @@ def _(
                 # Get the series code for the column
                 series_code = wanted_predictions.columns[index]
 
-                # Get the multiplier for the series code
-                multiplier = SERIES_CODE_TO_MULTIPLIER_MAP[series_code]
+                # Get the multiplier object
+                multiplier_object = series_code_to_multiplier_map[series_code]
+
+                # If the multiplier object is an integer or float,
+                # then set the multiplier to it directly
+                if isinstance(multiplier_object, (int, float)):
+                    multiplier = multiplier_object
+
+                # Otherwise, the multiplier object is a slider,
+                # so get the value from it
+                else:
+                    multiplier = multiplier_object.value
 
                 # Multiply the value by the multiplier
                 # and add the result to the score
@@ -1093,11 +1540,314 @@ def _(
             sorted_quality_of_life_scores, index=["Quality of life score"]
         ).transpose()
 
+        # Reset the index
+        quality_of_life_scores_data_frame.reset_index(
+            drop=False, inplace=True, names="Country"
+        )
+
+        # Set the index for the dataframe to be from
+        # 1 to the length of the dataframe
+        quality_of_life_scores_data_frame.index = range(
+            1, len(quality_of_life_scores_data_frame) + 1
+        )
+
+        # Reset the the index once more to get the rankings
+        # to show up in the dataframe
+        quality_of_life_scores_data_frame.reset_index(
+            drop=False, inplace=True, names="Rank"
+        )
+
         # Return the quality of life score data frame
         return quality_of_life_scores_data_frame
 
-    get_quality_of_life_score_for_question_2()
-    return (get_quality_of_life_score_for_question_2,)
+    return (get_quality_of_life_score_for_problem_2,)
+
+
+@app.cell
+def _(
+    MULTIPLIER_MAX_VALUE,
+    MULTIPLIER_MIN_VALUE,
+    SERIES_CODE_TO_MULTIPLIER_MAP,
+    mo,
+):
+    # Create the dictionary of sliders
+    multiplier_sliders_for_problem_2 = mo.ui.dictionary(
+        {
+            series_code: mo.ui.slider(
+                start=MULTIPLIER_MIN_VALUE,
+                stop=MULTIPLIER_MAX_VALUE,
+                value=default_value,
+                show_value=True,
+            )
+            for (
+                series_code,
+                default_value,
+            ) in SERIES_CODE_TO_MULTIPLIER_MAP.items()
+        }
+    )
+    return (multiplier_sliders_for_problem_2,)
+
+
+@app.cell
+def _(
+    SERIES_CODE_TO_MULTIPLIER_MAP,
+    SERIES_CODE_TO_NAME_MAP,
+    centred_slide_title,
+    get_quality_of_life_score_for_problem_2,
+    html,
+    multiplier_sliders_for_problem_2,
+    ui_table,
+):
+    def quality_of_life_slide(slider_dictionary):
+        "Function to create the slide for the quality of life scores."
+
+        # Create the list for the slider segment
+        slider_segment = []
+
+        # Iterate over the series codes
+        for series_code in SERIES_CODE_TO_MULTIPLIER_MAP.keys():
+            #
+
+            # Get the slider from the slider dictionary
+            slider = slider_dictionary[series_code]
+
+            # Get the series name from the series code
+            series_name = SERIES_CODE_TO_NAME_MAP[series_code]
+
+            # Create the html element
+            html_element = html(html(series_name), html(slider)).style(
+                display="flex",
+                flex_direction="column",
+                align_items="center",
+                justify_content="center",
+                text_align="center",
+                padding="10px",
+                gap="5px",
+                box_shadow="0 4px 8px 0 rgba(0, 0, 0, 0.2),"
+                + "0 3px 10px 0 rgba(0, 0, 0, 0.19)",
+                width="100%",
+                height="100%",
+                font_size="15px",
+            )
+
+            # Add the html element to the slider segment
+            slider_segment.append(html_element)
+
+        # Get the dataframe of the quality of life scores
+        quality_of_life_scores_data_frame = (
+            get_quality_of_life_score_for_problem_2(slider_dictionary)
+        )
+
+        # Create the html for the slide
+        return html(
+            centred_slide_title("Problem 2: Quality of life scores"),
+            html(*slider_segment).style(
+                display="grid",
+                grid_template_columns="repeat(6, 1fr)",
+                grid_auto_rows="1fr",
+                align_items="center",
+                justify_content="center",
+                gap="20px",
+                padding_bottom="20px",
+            ),
+            ui_table(quality_of_life_scores_data_frame, page_size=10),
+        )
+
+    # Create the slide
+    quality_of_life_slide(multiplier_sliders_for_problem_2)
+    return (quality_of_life_slide,)
+
+
+@app.cell
+def _(md):
+    # Create the title slide for data cleaning
+    md("# Data cleaning and preparation").center()
+    return
+
+
+@app.cell
+def _(md, md_numbered_list):
+    # Create the slide for the data cleaning
+    md(
+        "## Data cleaning",
+        "The data provided was poorly formatted and organised",
+        "with a lot of missing values across all columns.",
+        "",
+        "The data cleaning procedure we used are as follows:",
+        md_numbered_list(
+            "Select all the rows containing the series that we have chosen.",
+            "Coerce all of the data to numeric.",
+            "Drop the unnecessary columns, such as SCALE and Decimals.",
+            "Drop the column for 2011, as it doesn't have any data."
+            "Drop all rows that have empty values in the year columns.",
+        ),
+    )
+    return
+
+
+@app.cell
+def _(centred_slide_title, clean_data_function_code, html):
+    # Show the code for cleaning the data
+    html(
+        centred_slide_title("Data cleaning: Implementation"),
+        clean_data_function_code,
+    )
+    return
+
+
+@app.cell
+def _(html, md, md_unnumbered_list):
+    # Create the slide for data imputation
+    md(
+        "## Data imputation: Reasoning",
+        md_unnumbered_list(
+            html(
+                "After the data has been cleaned,",
+                "the numerous missing values need to be filled in",
+                "through a process called imputation",
+                "before the machine learning model can be trained",
+                "on the data.",
+            ),
+            html(
+                "Using the results of the exploratory analysis,",
+                "we picked the cubic regressor",
+                "(polynomial regressor of degree 3)",
+                "to impute the missing values row by row,",
+                "following the time series.",
+                "Using the imputer on the entire data frame",
+                "created ridiculous values in some series,",
+                "so the imputer applied to each row individually.",
+            ),
+            html(
+                "Linear regression models did not make the cut,",
+                "as they were poor at interpolating between",
+                "the values in the data set,",
+                "causing the missing values to not match",
+                "up with the actual values.",
+            ),
+            html(
+                "Decision tree regression models were also a poor choice,",
+                "as a significant amount of the data",
+                "needed to be extrapolated from the available data.",
+                "Decision tree regression models were good at interpolating",
+                "within the available data, but were terrible at extrapolating",
+                "as the values outside of the available data were just",
+                "constant values and did not fit the time series.",
+            ),
+        ),
+    )
+    return
+
+
+@app.cell
+def _(centred_slide_title, html, impute_missing_data_function_code):
+    # Create the slide for the implementation the imputer
+    html(
+        centred_slide_title("Data imputation: Implementation"),
+        impute_missing_data_function_code,
+    )
+    return
+
+
+@app.cell
+def _(html, md, md_unnumbered_list):
+    # Create the slide for the outcome and conclusion
+    md(
+        "## Outcome and conclusion",
+        md_unnumbered_list(
+            html(
+                "Overall, we have managed to meet our objectives and",
+                "have answered our problem statements in a satisfying manner,",
+                "and have already presented our findings",
+                "in the previous slides.",
+            ),
+            html(
+                "We have found that the time series data that",
+                "we chose presented quite a lot of challenges",
+                "for data analysis and imputation,",
+                "due to the small amount of data",
+                "for machine learning models to train on.",
+            ),
+            html(
+                "The data that we chose gave us an appreciation",
+                "for less complex models like linear models",
+                "and decision trees, as a lot of the more advanced",
+                "models that we tried to use did not fair well on",
+                "the tiny data set we had.",
+            ),
+            html(
+                "Even machine learning models that usually work well",
+                "with small amounts of data, like support vector machines,",
+                "failed to produce good results, and",
+                "more complex decision trees overfit the data.",
+            ),
+            html(
+                "More complex linear models that have regularisation",
+                "like Ridge regression, Elastic-Net regression,",
+                "and Bayesian regression, also failed to surpass",
+                "the basic ordinary least squares linear regression model",
+                "in performance.",
+            ),
+        ),
+    )
+    return
+
+
+@app.cell
+def _(html, md, md_unnumbered_list):
+    # Create the slide for the roles and responsibilities
+    md(
+        "## Roles and responsibilities",
+        md_unnumbered_list(
+            html(
+                "Haziq was in charge of the exploratory analysis section",
+                "and looked up all the regressors in Scikit-Learn to train",
+                "and evaluate the models' performance on the data set.",
+            ),
+            html(
+                "Nicholas handled data cleaning and imputation,",
+                "as well as data preparation for each of the problems,",
+                "making use of Haziq's results to select an applicable imputer",
+                "to be used to fill in missing values.",
+            ),
+            html(
+                "Jun Feng was responsible for solving problem 1,",
+                "making use of the imputed data to draw regression lines",
+                "to show the trend, and interpret the resulting trends",
+                "to draw our conclusions.",
+            ),
+            html(
+                "Dylan was in charge of problem 2,",
+                "also making use of Haziq's results to determine",
+                "a suitable regression model to predict a value for 2025,",
+                "and to come up with a suitable algorithm to turn the",
+                "predicted values into scores, and ranking the countries",
+                "based on those scores.",
+            ),
+        ),
+    )
+    return
+
+
+@app.cell
+def _(html, html_heading):
+    # Create the thank you slide
+    html(
+        html_heading(1, "Thank You!")
+        .center()
+        .style(
+            background_image="linear-gradient(to right, violet, indigo, blue,"
+            + "green, yellow, orange, red)",
+            color="transparent",
+            background_clip="text",
+            **{"-webkit-background-clip": "text"},
+        )
+    ).style(
+        display="flex",
+        align_items="center",
+        justify_content="center",
+    )
+    return
 
 
 if __name__ == "__main__":
